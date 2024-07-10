@@ -1,3 +1,4 @@
+use std::env;
 use tracing_subscriber::fmt::writer::MakeWriterExt;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -15,7 +16,7 @@ async fn main() {
     let all_files = debug_file.and(warn_file);
 
     tracing_subscriber::registry()
-        .with(EnvFilter::from_env("SPAMMER_LOG_LEVEL"))
+        .with(EnvFilter::from_env("AMECA_LOG_LEVEL"))
         // .with(console_layer)
         .with(
             tracing_subscriber::fmt::layer()
@@ -31,4 +32,8 @@ async fn main() {
         )
         .init();
 
+    info!("Loading .env variables...");
+    dotenv::dotenv().expect("NO .ENV file found");
+    let token = env::var("DISCORD_TOKEN").expect("Expected a token.");
+    debug!("Loaded token {}",token);
 }
