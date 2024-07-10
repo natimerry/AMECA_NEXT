@@ -4,9 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-serenity = "0.12.2"
-dotenv = "0.15.0"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["tracing", "env-filter"] }
 tokio = { version = "1.36.0", features = ["full"] }
 tracing-appender = "0.2.3"
+serenity = { version = "0.12.2", features = ["full"] }
+dotenv = "0.15.0"
