@@ -96,9 +96,11 @@ async fn main() {
         .init();
 
     let token = env::var("DISCORD_TOKEN").expect("Expected a token.");
+    debug!("Loaded token {}",token);
 
     let mut client = Client::builder(&token,GatewayIntents::privileged()).event_handler(AMECA).await;
-
+    // TODO: Setup global DB shard to be used with serenity
+    // TODO: setup database migrations
     match client{
         Ok(mut client) => {
             if let Err(why) = client.start().await {
@@ -112,5 +114,4 @@ async fn main() {
     }
 
 
-    debug!("Loaded token {}",token);
 }
