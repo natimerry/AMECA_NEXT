@@ -3,14 +3,14 @@ mod commands;
 use std::env;
 use serenity::model::gateway::Ready;
 use serenity::{async_trait, Client};
-use serenity::all::{EventHandler};
+use serenity::all::{CreateInteractionResponse, CreateInteractionResponseMessage, EventHandler};
 use serenity::model::application::{Command, Interaction};
 use serenity::client::Context;
 use serenity::prelude::GatewayIntents;
 use tracing_subscriber::fmt::writer::MakeWriterExt;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
-use tracing::{debug, error, info, Level, warn};
+use tracing::{debug, error, info, Level, trace, warn};
 use serenity::model::id::GuildId;
 use tracing_subscriber::EnvFilter;
 
@@ -45,7 +45,25 @@ impl EventHandler for AMECA {
         debug!("Registering the following commands: {commands:#?}");
     }
 
-    
+    async fn interaction_create(&self, ctx: Context,interaction: Interaction){
+        if let Interaction::Command(command) = interaction {
+            trace!("{}",format!("Received interaction : {command:#?} from {}",command.user.name));
+
+            let content = match command.data.name.as_str() {
+                "helloameca" => Some(commands::hello::run(&command.data.options())),
+                _ => Some("ACHIEVMENT: how did we get here?".to_string()),
+            };
+
+            if let Some(content) = content {
+                let data = CreateInteractionResponseMessage::new().content(content);
+                let builder = CreateInteractionResponse::Message(data);
+                if let Err(why) = command.create_response(&ctx.http, builder).await {
+                    error!("Cannot respond to slash command: {why}");
+                }
+            }
+        }
+    }
+
 }
 
 #[tokio::main]
