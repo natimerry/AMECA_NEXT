@@ -24,8 +24,8 @@ impl Database {
         let client = Surreal::new::<Ws>(address).await?;
         client
             .signin(Root {
-                username: env::var("SURREALDB_USER").expect("No SURREALDB_USER"),
-                password: env::var("SURREALDB_PASS").expect("NO SURREALDB_PASS"),
+                username: &env::var("SURREALDB_USER").expect("No SURREALDB_USER"),
+                password: &env::var("SURREALDB_PASS").expect("NO SURREALDB_PASS"),
             })
             .await?;
 

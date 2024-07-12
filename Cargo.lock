@@ -7,6 +7,8 @@ name = "AMECA2"
 version = "0.1.0"
 dependencies = [
  "dotenv",
+ "log",
+ "serde",
  "serenity",
  "surrealdb",
  "tokio",
