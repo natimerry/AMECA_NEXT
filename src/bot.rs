@@ -1,6 +1,7 @@
 use serenity::all::{Context, CreateInteractionResponse, CreateInteractionResponseMessage, EventHandler, GatewayIntents, GuildId, Interaction, Message, Ready};
 use serenity::Client;
 use tracing::{debug, error, info, trace};
+use crate::db::database::Database;
 
 mod automod;
 mod commands;
@@ -57,9 +58,29 @@ impl EventHandler for AMECA {
 }
 impl AMECA {
     async fn new() -> Self{
-        AMECA {
-            db: crate::db::database::Database::init(std::env::var("SURREAL_ADDR").unwrap()).await.unwrap()
+        let mut database = Database::init(std::env::var("SURREAL_ADDR").unwrap()).await;
+
+        return match database{
+            Ok(mut db) => {
+                let schema = std::fs::read_to_string("migrations/schema.surql")
+                    .expect("Couldnt read string");
+
+                // debug!("{}",schema);
+                if let Err(why) = db.set_schema(schema).await{
+                    error!("Error settind database schema! {:#?}",why);
+                    panic!()
+                }
+                return AMECA{
+                    db
+                }
+
+            },
+            Err(error) => {
+                error!("Error setting up database: {:#?}",error);
+                panic!()
+            }
         }
+
     }
 
     pub async fn start_shard(token: &str){

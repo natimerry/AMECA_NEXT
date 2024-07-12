@@ -1,5 +1,6 @@
 use std::env;
 use std::fmt::{Debug, Display};
+use log::error;
 
 use serde::de::DeserializeOwned;
 use surrealdb::{Error, Response};
@@ -43,13 +44,36 @@ impl Database {
         })
     }
 
+    pub async fn set_schema(&mut self,schema: String) -> Result<(),surrealdb::Error> {
+        info!("Starting migrations");
+
+        let queries =
+            schema.lines().filter(|string|!(*string).starts_with("--"))
+                .filter(|string| !(*string).is_empty()).collect::<Vec<&str>>();
+
+        for query in queries{
+            let mut query = self.db_query(query).await?;
+            for i in 0..query.num_statements() {
+                let result: Result<Option<String>, Error> = query.take(i);
+                match result {
+                    Ok(_) => {}
+                    Err(E) => {
+                        error!("{}", E.to_string());
+                        panic!();
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
     pub async fn db_query<R>(
         &self,
         query: R,
     ) -> Result<Response, surrealdb::Error>
     where
-        R: Into<String> + Debug + IntoQuery
+        R: Into<String> + Debug + IntoQuery + std::fmt::Display
     {
+        debug!("Sending query: {query}");
         Ok(self.client.query(query).await.unwrap())
     }
 }
