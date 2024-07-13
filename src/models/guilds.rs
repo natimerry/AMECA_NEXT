@@ -8,8 +8,7 @@ use surrealdb::Error;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Guild {
-    pub guild_id: u64,
-    pub members: u64,
+    pub guild_id: String,
     pub time_of_join: DateTime<Utc>,
 }
 
@@ -25,8 +24,7 @@ impl GuildData for Database {
         let created_guild: Result<Option<Guild>, surrealdb::Error> = db.client
             .create(("guild",guild_id.get()))
             .content(Guild{
-                guild_id: guild_id.get(),
-                members,
+                guild_id: guild_id.to_string(),
                 time_of_join: Utc::now(),
             }).await;
         debug!("{:?}",created_guild);

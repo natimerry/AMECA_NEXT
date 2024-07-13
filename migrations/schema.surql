@@ -39,10 +39,8 @@ DEFINE FIELD out ON deleted TYPE record<message> PERMISSIONS FULL;
 
 DEFINE TABLE guild TYPE NORMAL SCHEMAFULL PERMISSIONS FOR select, create FULL, FOR update, delete NONE;
 
-DEFINE FIELD guild_id ON guild TYPE decimal PERMISSIONS FOR select, create, update, delete WHERE FULL;
-DEFINE FIELD members ON guild TYPE decimal DEFAULT 0 PERMISSIONS FOR select, create, update, delete WHERE FULL;
+DEFINE FIELD guild_id ON guild TYPE string PERMISSIONS FOR select, create, update, delete WHERE FULL;
 DEFINE FIELD time_of_join ON guild TYPE string PERMISSIONS FOR select, create, update, delete WHERE FULL;
-
 DEFINE INDEX guild_id ON guild FIELDS guild_id UNIQUE;
 
 -- ------------------------------

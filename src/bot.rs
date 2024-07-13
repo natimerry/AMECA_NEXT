@@ -34,11 +34,10 @@ impl EventHandler for AMECA {
         // );
 
         let guilds = Database::get_all_guilds(&self.db).await;
-        let duh= Database::joined_guild(&self.db,0,GuildId::from(env::var("GUILD_ID").unwrap().parse::<u64>().unwrap())).await;
         match guilds{
             Some(guilds) => {
                 for guild in guilds{
-                    let guild_id = GuildId::new(guild.guild_id);
+                    let guild_id = GuildId::from(guild.guild_id.parse::<u64>().unwrap());
                     let commands = guild_id
                         .set_commands(&ctx.http, vec![
                             commands::hello::register(),
