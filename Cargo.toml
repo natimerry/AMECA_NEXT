@@ -10,6 +10,7 @@ tokio = { version = "1.36.0", features = ["full"] }
 tracing-appender = "0.2.3"
 serenity = { version = "0.12.2", features = ["full"] }
 dotenv = "0.15.0"
-surrealdb = { version = "1.2.0", features = ["kv-mem"] }
+surrealdb = { version = "1.2.0", features = ["kv-mem","sql2"] }
 serde = { version = "1.0.204", features = ["derive"] }
 log = "0.4.22"
+chrono = "0.4.38"

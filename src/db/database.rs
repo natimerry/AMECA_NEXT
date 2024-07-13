@@ -11,7 +11,7 @@ use surrealdb::opt::IntoQuery;
 use surrealdb::Surreal;
 use tracing::{debug, info};
 
-#[derive(Clone)]
+#[derive(Clone,Debug)]
 pub struct Database {
     pub client: Surreal<Client>,
     pub name_space: String,
@@ -39,28 +39,24 @@ impl Database {
 
         Ok(Database {
             client,
-            name_space: String::from("AMECA_NEXT"),
-            db_name: String::from("storage"),
+            name_space: String::from("ameca"),
+            db_name: String::from("ameca"),
         })
     }
 
     pub async fn set_schema(&mut self,schema: String) -> Result<(),surrealdb::Error> {
         info!("Starting migrations");
 
-        let queries =
-            schema.lines().filter(|string|!(*string).starts_with("--"))
-                .filter(|string| !(*string).is_empty()).collect::<Vec<&str>>();
-
-        for query in queries{
-            let mut query = self.db_query(query).await?;
-            for i in 0..query.num_statements() {
-                let result: Result<Option<String>, Error> = query.take(i);
-                match result {
-                    Ok(_) => {}
-                    Err(E) => {
-                        error!("{}", E.to_string());
-                        panic!();
-                    }
+        let mut query = self.db_query(schema).await?;
+        for i in 0..query.num_statements() {
+            let result: Result<Option<String>, Error> = query.take(i);
+            match result {
+                Ok(_) => {
+                    debug!("{result:?}")
+                }
+                Err(E) => {
+                    error!("{}", E.to_string());
+                    panic!();
                 }
             }
         }

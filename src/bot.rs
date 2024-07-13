@@ -1,8 +1,9 @@
-use serenity::all::{Context, CreateInteractionResponse, CreateInteractionResponseMessage, EventHandler, GatewayIntents, GuildId, Interaction, Message, Ready};
+use std::env;
+use serenity::all::{Cache, ChannelId, ChannelType, Context, CreateInteractionResponse, CreateInteractionResponseMessage, EventHandler, GatewayIntents, GuildId, Interaction, Message, MessageId, MessagePagination, Ready, Settings};
 use serenity::Client;
 use tracing::{debug, error, info, trace};
 use crate::db::database::Database;
-
+use crate::models::guilds::GuildData;
 mod automod;
 mod commands;
 pub(crate) struct AMECA{
@@ -11,29 +12,48 @@ pub(crate) struct AMECA{
 
 #[serenity::async_trait]
 impl EventHandler for AMECA {
+    async fn message_delete(&self, ctx: Context, channel_id: ChannelId, deleted_message_id: MessageId, guild_id: Option<GuildId>) {
+        let msg = &ctx.cache.message(channel_id,deleted_message_id).unwrap().content;
+        debug!("{:?}",msg);
+
+    }
+
     async fn ready(&self, ctx: Context, ready: Ready) {
         info!("{} is connected!", ready.user.name);
 
 
-        let guild_token =  std::env::var("GUILD_ID")
-            .expect("Expected GUILD_ID in environment")
-            .parse()
-            .expect("GUILD_ID must be an integer");
+        // let guild_token =  std::env::var("GUILD_ID")
+        //     .expect("Expected GUILD_ID in environment")
+        //     .parse()
+        //     .expect("GUILD_ID must be an integer");
+        //
+        // debug!(guild_token);
+        //
+        // let guild_id = GuildId::new(
+        //     guild_token
+        // );
 
-        debug!(guild_token);
+        let guilds = Database::get_all_guilds(&self.db).await;
+        let duh= Database::joined_guild(&self.db,0,GuildId::from(env::var("GUILD_ID").unwrap().parse::<u64>().unwrap())).await;
+        match guilds{
+            Some(guilds) => {
+                for guild in guilds{
+                    let guild_id = GuildId::new(guild.guild_id);
+                    let commands = guild_id
+                        .set_commands(&ctx.http, vec![
+                            commands::hello::register(),
+                        ])
+                        .await;
 
-        let guild_id = GuildId::new(
-            guild_token
-        );
+                    debug!("Registering the following commands: {commands:#?} for guild: {guild:#?}");
+                    info!("Starting warm-up cache.");
+                }
+            },
+            None => {
+                error!("Bot doesnt seem to be any guild, falling back to testing env variable");
+            }
+        }
 
-
-        let commands = guild_id
-            .set_commands(&ctx.http, vec![
-                commands::hello::register(),
-            ])
-            .await;
-
-        debug!("Registering the following commands: {commands:#?}");
     }
 
 
@@ -57,6 +77,7 @@ impl EventHandler for AMECA {
 
 }
 impl AMECA {
+
     async fn new() -> Self{
         let mut database = Database::init(std::env::var("SURREAL_ADDR").unwrap()).await;
 
@@ -67,7 +88,7 @@ impl AMECA {
 
                 // debug!("{}",schema);
                 if let Err(why) = db.set_schema(schema).await{
-                    error!("Error settind database schema! {:#?}",why);
+                    error!("Error setting database schema! {:#?}",why);
                     panic!()
                 }
                 return AMECA{
@@ -84,9 +105,14 @@ impl AMECA {
     }
 
     pub async fn start_shard(token: &str){
+        let mut settings = Settings::default();
+        settings.max_messages=10000;
+        // let cache = Cache::new_with_settings(settings);
         let mut client = Client::builder(token,GatewayIntents::privileged()
                                                                     | GatewayIntents::GUILD_MESSAGES)
-                                        .event_handler(Self::new().await).await;
+                                        .event_handler(Self::new().await)
+                                        .cache_settings(settings)
+                                        .await;
         // TODO: setup database migrations
         match client{
             Ok(mut client) => {

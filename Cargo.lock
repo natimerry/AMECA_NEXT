@@ -6,6 +6,7 @@ version = 3
 name = "AMECA2"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "dotenv",
  "log",
  "serde",

@@ -14,7 +14,7 @@ DEFINE FIELD in ON banned TYPE record<guild> PERMISSIONS FULL;
 DEFINE FIELD issuedby ON banned TYPE record<members> PERMISSIONS FOR select, create, update, delete WHERE FULL;
 DEFINE FIELD out ON banned TYPE record<members> PERMISSIONS FULL;
 DEFINE FIELD reason ON banned TYPE string PERMISSIONS FOR select, create, update, delete WHERE FULL;
-DEFINE FIELD time ON banned TYPE datetime PERMISSIONS FOR select, create, update, delete WHERE FULL;
+DEFINE FIELD time ON banned TYPE string PERMISSIONS FOR select, create, update, delete WHERE FULL;
 
 -- ------------------------------
 -- TABLE: channel
@@ -22,7 +22,7 @@ DEFINE FIELD time ON banned TYPE datetime PERMISSIONS FOR select, create, update
 
 DEFINE TABLE channel TYPE NORMAL SCHEMAFULL PERMISSIONS NONE;
 
-DEFINE FIELD channel_id ON channel TYPE datetime PERMISSIONS FOR select, create, update, delete WHERE FULL;
+DEFINE FIELD channel_id ON channel TYPE string PERMISSIONS FOR select, create, update, delete WHERE FULL;
 
 -- ------------------------------
 -- TABLE: deleted
@@ -41,7 +41,7 @@ DEFINE TABLE guild TYPE NORMAL SCHEMAFULL PERMISSIONS FOR select, create FULL, F
 
 DEFINE FIELD guild_id ON guild TYPE decimal PERMISSIONS FOR select, create, update, delete WHERE FULL;
 DEFINE FIELD members ON guild TYPE decimal DEFAULT 0 PERMISSIONS FOR select, create, update, delete WHERE FULL;
-DEFINE FIELD time_of_join ON guild TYPE datetime PERMISSIONS FOR select, create, update, delete WHERE FULL;
+DEFINE FIELD time_of_join ON guild TYPE string PERMISSIONS FOR select, create, update, delete WHERE FULL;
 
 DEFINE INDEX guild_id ON guild FIELDS guild_id UNIQUE;
 
@@ -85,7 +85,7 @@ DEFINE INDEX userid ON members FIELDS user_id UNIQUE;
 DEFINE TABLE message TYPE NORMAL SCHEMALESS PERMISSIONS NONE;
 
 DEFINE FIELD content ON message TYPE string PERMISSIONS FOR select, create, update, delete WHERE FULL;
-DEFINE FIELD time ON message TYPE datetime PERMISSIONS FOR select, create, update, delete WHERE FULL;
+DEFINE FIELD time ON message TYPE string PERMISSIONS FOR select, create, update, delete WHERE FULL;
 
 -- ------------------------------
 -- TABLE: sent
