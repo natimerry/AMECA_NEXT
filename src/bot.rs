@@ -5,11 +5,14 @@ use serenity::all::{
     CreateInteractionResponseMessage, EventHandler, GatewayIntents, GuildChannel, GuildId,
     Interaction, Message, MessageId, MessagePagination, Ready, Settings,
 };
+use crate::models::messages::MessageData;
 use serenity::Client;
 use std::any::Any;
 use std::{env, thread};
+use surrealdb::rpc::Data;
 use tokio::runtime::Handle;
-use tracing::{debug, error, info, trace};
+use tokio::task::JoinHandle;
+use tracing::{debug, error, info, Level, span, trace};
 mod automod;
 mod commands;
 pub(crate) struct AMECA {
@@ -35,6 +38,8 @@ impl EventHandler for AMECA {
     }
 
     async fn ready(&self, ctx: Context, ready: Ready) {
+        let span= span!(Level::DEBUG, "on_ready");
+        let _enter = span.enter();
         info!("{} is connected!", ready.user.name);
 
         if self.test {
@@ -48,7 +53,10 @@ impl EventHandler for AMECA {
                 "Registering the following commands: {commands:#?} for test guild: {guild_id:#?}"
             );
             info!("Starting warm-up cache.");
-            self.warm_up_cache(ctx.clone(), guild_id.clone()).await;
+            let join_handle = self.warm_up_cache(ctx.clone(), guild_id.clone()).await;
+            join_handle.await.expect("Failed to join warm up threads");
+            info!("Finished warming up cache!");
+
             return;
         }
 
@@ -71,7 +79,10 @@ impl EventHandler for AMECA {
                         "Registering the following commands: {commands:#?} for guild: {guild:#?}"
                     );
                     info!("Starting warm-up cache.");
-                    self.warm_up_cache(ctx.clone(), guild_id.clone()).await;
+                    let join_handle = self.warm_up_cache(ctx.clone(), guild_id.clone()).await;
+                    join_handle.await.expect("Failed to join warm up threads");
+
+                    info!("Finished warming up cache!");
                 }
             }
             None => {
@@ -106,14 +117,30 @@ impl EventHandler for AMECA {
     }
 }
 impl AMECA {
-    async fn store_messages_in_db(&self, messages: Vec<Message>) {
+    async fn store_messages_in_db(messages: Vec<Message>) {
         // since this is going to get called through a different thread, we will be using a different
         // parallel thread to store messages on the DB
         // concurrency should be handled by SurrealDB without us having to manage Mutexes
 
-        todo!();
+        let new_db = Database::init(env::var("SURREAL_ADDR").unwrap()).await;
+
+        match new_db{
+            Ok(ref some_db) => {
+                info!("Established concurrent connection with surrealdb!");
+            }
+            Err(e) => {
+                error!("Error in establishing concurrent connection {e:#?}");
+                panic!()
+            }
+        };
+        let new_db = new_db.unwrap();
+
+        for message in messages{
+            Database::new_message(&new_db,message).await;
+        }
+
     }
-    async fn warm_up_cache(&self, ctx: Context, guild_id: GuildId) {
+    async fn warm_up_cache(&self, ctx: Context, guild_id: GuildId) -> JoinHandle<()>{
         info!("Creating new concurrency thread!");
         let t = tokio::spawn(async move {
             let channels = ctx
@@ -121,10 +148,10 @@ impl AMECA {
                 .get_channels(guild_id)
                 .await
                 .expect("CANT GET NO CHANNELS OFF GUILD IMMA KMS");
-            info!("Creating new database connection to store messages!");
             // let db = crate::db::database::Database::init(env::var("SURREAL_ADDR").unwrap()).await.unwrap();
             for channel in &channels {
                 if channel.kind == ChannelType::Text {
+                    info!("Checking iterating over channel: {}",channel.name);
                     let last_msg = channel.last_message_id;
                     let messages = ctx
                         .http
@@ -142,6 +169,8 @@ impl AMECA {
                                 last_msg.unwrap(),
                                 channel.name
                             );
+
+                            AMECA::store_messages_in_db(vector).await;
                         }
                         Err(e) => {
                             error!("Error in receiving messages: {e:#?}");
@@ -149,8 +178,9 @@ impl AMECA {
                     }
                 }
             }
-            return channels;
         });
+
+        return t;
 
         /* TODO: Is it better to retrieve the last message stored in the DB and then fetch 100 messages post
         or better to focus on more recent messages */
