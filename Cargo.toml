@@ -14,3 +14,7 @@ surrealdb = { version = "1.2.0", features = ["kv-mem","sql2"] }
 serde = { version = "1.0.204", features = ["derive"] }
 log = "0.4.22"
 chrono = "0.4.38"
+clap = { version = "4.5.9", features = ["derive"] }
+
+[patch.crates-io]
+serenity = { git = "https://github.com/serenity-rs/serenity", branch = "current" }

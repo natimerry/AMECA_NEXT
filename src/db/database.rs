@@ -1,17 +1,17 @@
+use log::error;
 use std::env;
 use std::fmt::{Debug, Display};
-use log::error;
 
 use serde::de::DeserializeOwned;
-use surrealdb::{Error, Response};
 use surrealdb::engine::remote::ws::{Client, Ws};
+use surrealdb::{Error, Response};
 // use surrealdb::sql::query;
 use surrealdb::opt::auth::Root;
 use surrealdb::opt::IntoQuery;
 use surrealdb::Surreal;
 use tracing::{debug, info};
 
-#[derive(Clone,Debug)]
+#[derive(Clone, Debug)]
 pub struct Database {
     pub client: Surreal<Client>,
     pub name_space: String,
@@ -30,11 +30,7 @@ impl Database {
             })
             .await?;
 
-        client
-            .use_ns("database")
-            .use_db("storage")
-            .await
-            .unwrap();
+        client.use_ns("database").use_db("storage").await.unwrap();
         // TODO: schema
 
         Ok(Database {
@@ -44,7 +40,7 @@ impl Database {
         })
     }
 
-    pub async fn set_schema(&mut self,schema: String) -> Result<(),surrealdb::Error> {
+    pub async fn set_schema(&mut self, schema: String) -> Result<(), surrealdb::Error> {
         info!("Starting migrations");
 
         let mut query = self.db_query(schema).await?;
@@ -62,12 +58,9 @@ impl Database {
         }
         Ok(())
     }
-    pub async fn db_query<R>(
-        &self,
-        query: R,
-    ) -> Result<Response, surrealdb::Error>
+    pub async fn db_query<R>(&self, query: R) -> Result<Response, surrealdb::Error>
     where
-        R: Into<String> + Debug + IntoQuery + std::fmt::Display
+        R: Into<String> + Debug + IntoQuery + std::fmt::Display,
     {
         debug!("Sending query: {query}");
         Ok(self.client.query(query).await.unwrap())
