@@ -1,10 +1,6 @@
 use crate::db::database::Database;
 use crate::models::guilds::GuildData;
-use serenity::all::{
-    Cache, ChannelId, ChannelType, Context, CreateInteractionResponse,
-    CreateInteractionResponseMessage, EventHandler, GatewayIntents, GuildChannel, GuildId,
-    Interaction, Message, MessageId, MessagePagination, Ready, Settings,
-};
+use serenity::all::{Cache, ChannelId, ChannelType, Context, CreateCommand, CreateInteractionResponse, CreateInteractionResponseMessage, EventHandler, GatewayIntents, GuildChannel, GuildId, Http, Interaction, Message, MessageId, MessagePagination, Ready, Settings};
 use crate::models::messages::MessageData;
 use serenity::Client;
 use std::any::Any;
@@ -37,6 +33,7 @@ impl EventHandler for AMECA {
         debug!("{:?}", msg);
     }
 
+
     async fn ready(&self, ctx: Context, ready: Ready) {
         let span= span!(Level::DEBUG, "on_ready");
         let _enter = span.enter();
@@ -45,22 +42,10 @@ impl EventHandler for AMECA {
         if self.test {
             let guild_token = std::env::var("GUILD_ID").unwrap().parse::<u64>().unwrap();
             let guild_id = GuildId::from(guild_token);
-            let commands = guild_id
-                .set_commands(&ctx.http, vec![commands::hello::register()])
-                .await;
-
-            debug!(
-                "Registering the following commands: {commands:#?} for test guild: {guild_id:#?}"
-            );
-            info!("Starting warm-up cache.");
-            let join_handle = self.warm_up_cache(ctx.clone(), guild_id.clone()).await;
-            join_handle.await.expect("Failed to join warm up threads");
-            info!("Finished warming up cache!");
-
+            Self::set_commands(&ctx,vec![commands::hello::register()],guild_id).await;
             return;
         }
-
-        let guild = crate::db::database::Database::joined_guild(
+        Database::joined_guild(
             &self.db,
             0,
             GuildId::from(785898278083362857),
@@ -71,18 +56,7 @@ impl EventHandler for AMECA {
             Some(guilds) => {
                 for guild in guilds {
                     let guild_id = GuildId::from(guild.guild_id.parse::<u64>().unwrap());
-                    let commands = guild_id
-                        .set_commands(&ctx.http, vec![commands::hello::register()])
-                        .await;
-
-                    debug!(
-                        "Registering the following commands: {commands:#?} for guild: {guild:#?}"
-                    );
-                    info!("Starting warm-up cache.");
-                    let join_handle = self.warm_up_cache(ctx.clone(), guild_id.clone()).await;
-                    join_handle.await.expect("Failed to join warm up threads");
-
-                    info!("Finished warming up cache!");
+                    Self::set_commands(&ctx,vec![commands::hello::register()],guild_id).await;
                 }
             }
             None => {
@@ -140,7 +114,7 @@ impl AMECA {
         }
 
     }
-    async fn warm_up_cache(&self, ctx: Context, guild_id: GuildId) -> JoinHandle<()>{
+    async fn warm_up_cache(ctx: Context, guild_id: GuildId) -> JoinHandle<()>{
         info!("Creating new concurrency thread!");
         let t = tokio::spawn(async move {
             let channels = ctx
@@ -187,7 +161,6 @@ impl AMECA {
     }
     async fn new(test: bool) -> Self {
         let mut database = Database::init(std::env::var("SURREAL_ADDR").unwrap()).await;
-
         return match database {
             Ok(mut db) => {
                 let schema = std::fs::read_to_string("migrations/schema.surql")
@@ -230,5 +203,22 @@ impl AMECA {
                 panic!();
             }
         }
+    }
+
+
+    async fn set_commands(ctx: &Context,commands: Vec<CreateCommand>,guild_id: GuildId){
+        let commands = guild_id
+            .set_commands(&ctx.http, commands)
+            .await;
+
+        debug!(
+                        "Registering the following commands: {commands:#?} for guild: {:#?}"
+            ,guild_id.get()
+                    );
+        info!("Starting warm-up cache.");
+        let join_handle = AMECA::warm_up_cache(ctx.clone(), guild_id.clone()).await;
+        join_handle.await.expect("Failed to join warm up threads");
+
+        info!("Finished warming up cache!");
     }
 }
