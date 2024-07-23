@@ -15,6 +15,7 @@ pub struct Message {
 
 pub trait MessageData {
     async fn new_message(db: &Database,msg: serenity::all::Message);
+    async fn fetch_msg(db:&Database,msg_id: u64) -> Option<Message>;
 }
 
 impl MessageData for Database{
@@ -37,6 +38,16 @@ impl MessageData for Database{
                 warn!("Unable to store message {} in database, may already exist.",msg.id.get());
                 error!("{e:?}")
             }
+        }
+    }
+
+    async fn fetch_msg(db:&Database,msg_id: u64) -> Option<Message>{
+        let query = format!("(SELECT * from message:{msg_id})[0]");
+        return if let Ok(mut resp) = db.db_query(query).await {
+            let msg: Option<Message> = resp.take(0).expect("SHIT");
+            msg
+        } else {
+            None
         }
     }
 }

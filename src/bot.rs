@@ -18,22 +18,31 @@ pub(crate) struct AMECA {
 
 #[serenity::async_trait]
 impl EventHandler for AMECA {
-    async fn message_delete(
-        &self,
-        ctx: Context,
-        channel_id: ChannelId,
-        deleted_message_id: MessageId,
-        guild_id: Option<GuildId>,
-    ) {
-        let msg = &ctx
-            .cache
-            .message(channel_id, deleted_message_id)
-            .unwrap()
-            .content;
-        debug!("{:?}", msg);
+    // offloadable events
+    
+    async fn message(&self, ctx: Context, new_message: Message) {
+        self.on_message(ctx,new_message).await;
     }
 
+    async
+    fn message_delete(&self, ctx: Context, channel_id: ChannelId, deleted_message_id: MessageId, guild_id: Option<GuildId>) {
+        let msg = self.get_msg_from_cache(ctx, channel_id, deleted_message_id, guild_id).await;
+        match msg{
+            Some(msg) => {
+                debug!("{:#?}",msg);
+            }
+            None => {
+                let msg = Database::fetch_msg(&self.db,deleted_message_id.get()).await.unwrap_or(crate::models::messages::Message{
+                    time: "placeholder".to_string(),
+                    content: "placeholder".to_string(),
+                });
 
+                debug!("{:?}",msg);
+            }
+        }
+    }
+
+    // bot startup events
     async fn ready(&self, ctx: Context, ready: Ready) {
         let span= span!(Level::DEBUG, "on_ready");
         let _enter = span.enter();
