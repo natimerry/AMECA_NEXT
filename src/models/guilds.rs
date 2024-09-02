@@ -13,12 +13,18 @@ pub struct Guild {
 }
 
 pub trait GuildData {
-    fn joined_guild(db: &Database, members: u64, guild_id: GuildId) -> impl std::future::Future<Output = ()> + Send;
-    fn get_all_guilds(db: &Database) -> impl std::future::Future<Output = Option<Vec<Guild>>> + Send;
+    fn joined_guild(
+        db: &Database,
+        members: u64,
+        guild_id: GuildId,
+    ) -> impl std::future::Future<Output = ()> + Send;
+    fn get_all_guilds(
+        db: &Database,
+    ) -> impl std::future::Future<Output = Option<Vec<Guild>>> + Send;
 }
 
 impl GuildData for Database {
-    async fn joined_guild(db: &Database, members: u64, guild_id: GuildId) {
+    async fn joined_guild(db: &Database, _members: u64, guild_id: GuildId) {
         info!("Registering new GUILD in the database");
         let created_guild: Result<Option<Guild>, surrealdb::Error> = db
             .client
@@ -44,7 +50,7 @@ impl GuildData for Database {
                 debug!("{:#?}", found_guilds);
                 Some(found_guilds)
             }
-            Err(e) => {
+            Err(_) => {
                 error!("Unable to query database for guilds!");
                 None
             }

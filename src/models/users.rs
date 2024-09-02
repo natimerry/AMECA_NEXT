@@ -10,15 +10,15 @@ pub trait UserData {
     ) -> impl std::future::Future<Output = ()> + Send;
 }
 
-
 fn de_from_str<'de, D>(deserializer: D) -> Result<i64, D::Error>
-    where D: Deserializer<'de>
+where
+    D: Deserializer<'de>,
 {
     let s = String::deserialize(deserializer)?;
     let x: Result<i64, D::Error> = s.parse().map_err(de::Error::custom);
     return x;
 }
-#[derive(Debug,Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Members {
     pub admin: bool,
     pub banned: bool,
@@ -29,13 +29,14 @@ pub struct Members {
 
 impl UserData for Database {
     async fn new_user(db: &Database, user: serenity::all::User) {
-        debug!("Storing user {}",&user);
-        let mem= Members {
+        debug!("Storing user {}", &user);
+        let mem = Members {
             admin: false,
             banned: false,
             name: user.name,
-            warnings_issued: 0,};
-        debug!("Storing user {:#?}",&mem);
+            warnings_issued: 0,
+        };
+        debug!("Storing user {:#?}", &mem);
 
         let created_user: Result<Option<Members>, surrealdb::Error> = db
             .client
@@ -49,9 +50,7 @@ impl UserData for Database {
                 // todo: relate message to author after user database model is created
             }
             Err(e) => {
-                warn!(
-                    "Unable to store user in database, may already exist.",
-                );
+                warn!("Unable to store user in database, may already exist.",);
                 error!("{e:?}")
             }
         }

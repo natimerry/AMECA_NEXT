@@ -1,10 +1,7 @@
 use crate::db::database::Database;
 use serde::{Deserialize, Serialize};
-use serenity::all::GuildId;
 
-use chrono::{DateTime, Utc};
-use surrealdb::Error;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, warn};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Channel {

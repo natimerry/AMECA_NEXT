@@ -4,7 +4,7 @@ pub mod models;
 
 use crate::bot::AMECA;
 use clap::Parser;
-use tracing::{debug, error, info, trace, warn, Level};
+use tracing::{debug, Level};
 use tracing_subscriber::fmt::writer::MakeWriterExt;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;

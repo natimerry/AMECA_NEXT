@@ -4,13 +4,12 @@ use crate::models::guilds::GuildData;
 use crate::models::messages::MessageData;
 use crate::models::users::*;
 use serenity::all::{
-    Cache, Channel, ChannelId, ChannelType, Context, CreateCommand, CreateInteractionResponse, CreateInteractionResponseMessage, EventHandler, GatewayIntents, GuildChannel, GuildId, Http, Interaction, Message, MessageId, MessagePagination, Ready, Settings, User
+    ChannelId, ChannelType, Context, CreateCommand, CreateInteractionResponse,
+    CreateInteractionResponseMessage, EventHandler, GatewayIntents, GuildChannel, GuildId,
+    Interaction, Message, MessageId, MessagePagination, Ready, Settings, User,
 };
 use serenity::Client;
-use std::any::Any;
-use std::{env, thread};
-use surrealdb::rpc::Data;
-use tokio::runtime::Handle;
+use std::env;
 use tokio::task::JoinHandle;
 use tracing::{debug, error, info, span, trace, Level};
 mod automod;
@@ -25,7 +24,7 @@ impl EventHandler for AMECA {
     // offloadable events
 
     async fn message(&self, ctx: Context, new_message: Message) {
-        self.on_message(ctx, new_message).await;
+        let _ = self.on_message(ctx, new_message).await;
     }
 
     async fn message_delete(
@@ -33,10 +32,10 @@ impl EventHandler for AMECA {
         ctx: Context,
         channel_id: ChannelId,
         deleted_message_id: MessageId,
-        guild_id: Option<GuildId>,
+        _guild_id: Option<GuildId>,
     ) {
         let msg = self
-            .get_msg_from_cache(ctx, channel_id, deleted_message_id, guild_id)
+            .get_msg_from_cache(ctx, channel_id, deleted_message_id)
             .await;
         match msg {
             Some(msg) => {
@@ -110,7 +109,7 @@ impl EventHandler for AMECA {
     }
 }
 impl AMECA {
-    async fn store_messages_in_db(messages: Vec<Message>,channel: GuildChannel) {
+    async fn store_messages_in_db(messages: Vec<Message>, channel: GuildChannel) {
         // since this is going to get called through a different thread, we will be using a different
         // parallel thread to store messages on the DB
         // concurrency should be handled by SurrealDB without us having to manage Mutexes
@@ -118,7 +117,7 @@ impl AMECA {
         let new_db = Database::init(env::var("SURREAL_ADDR").unwrap()).await;
 
         match new_db {
-            Ok(ref some_db) => {
+            Ok(_) => {
                 info!("Established concurrent connection with surrealdb!");
             }
             Err(e) => {
@@ -129,7 +128,7 @@ impl AMECA {
         let new_db = new_db.unwrap();
 
         for message in messages {
-            Database::new_message(&new_db, message,channel.clone()).await;
+            Database::new_message(&new_db, message, channel.clone()).await;
         }
     }
 
@@ -142,7 +141,7 @@ impl AMECA {
         let new_db = Database::init(env::var("SURREAL_ADDR").unwrap()).await;
 
         match new_db {
-            Ok(ref some_db) => {
+            Ok(_) => {
                 info!("Established concurrent connection with surrealdb!");
             }
             Err(e) => {
@@ -166,7 +165,7 @@ impl AMECA {
         let new_db = Database::init(env::var("SURREAL_ADDR").unwrap()).await;
 
         match new_db {
-            Ok(ref some_db) => {
+            Ok(_) => {
                 info!("Established concurrent connection with surrealdb!");
             }
             Err(e) => {
@@ -181,7 +180,6 @@ impl AMECA {
         }
     }
 
-
     async fn warm_up_cache(ctx: Context, guild_id: GuildId) -> JoinHandle<()> {
         info!("Creating new concurrency thread!");
         let t = tokio::spawn(async move {
@@ -191,12 +189,17 @@ impl AMECA {
                 .await
                 .expect("CANT GET NO CHANNELS OFF GUILD IMMA KMS");
 
-
-
             AMECA::store_channels_in_db(&channels).await;
-            let members = ctx.http.get_guild_members(guild_id, None, None).await.expect("Unable to get all members from guild");
+            let members = ctx
+                .http
+                .get_guild_members(guild_id, None, None)
+                .await
+                .expect("Unable to get all members from guild");
 
-            let x = members.iter().map(|member| member.user.clone()).collect::<Vec<User>>();
+            let x = members
+                .iter()
+                .map(|member| member.user.clone())
+                .collect::<Vec<User>>();
             AMECA::store_members_in_db(x).await;
             for channel in &channels {
                 if channel.kind == ChannelType::Text {
@@ -219,7 +222,7 @@ impl AMECA {
                                 channel.name
                             );
 
-                            AMECA::store_messages_in_db(vector,channel.clone()).await;
+                            AMECA::store_messages_in_db(vector, channel.clone()).await;
                         }
                         Err(e) => {
                             error!("Error in receiving messages: {e:#?}");
@@ -236,7 +239,7 @@ impl AMECA {
     }
     #[allow(unreachable_code)]
     async fn new(test: bool) -> Self {
-        let mut database = Database::init(std::env::var("SURREAL_ADDR").unwrap()).await;
+        let database = Database::init(std::env::var("SURREAL_ADDR").unwrap()).await;
         return match database {
             Ok(mut db) => {
                 let schema = std::fs::read_to_string("migrations/schema.surql")

@@ -1,8 +1,7 @@
 use log::error;
 use std::env;
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 
-use serde::de::DeserializeOwned;
 use surrealdb::engine::remote::ws::{Client, Ws};
 use surrealdb::{Error, Response};
 // use surrealdb::sql::query;
@@ -50,8 +49,8 @@ impl Database {
                 Ok(_) => {
                     debug!("{result:?}")
                 }
-                Err(E) => {
-                    error!("{}", E.to_string());
+                Err(e) => {
+                    error!("{}", e.to_string());
                     panic!();
                 }
             }
