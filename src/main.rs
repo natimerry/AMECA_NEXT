@@ -30,7 +30,6 @@ async fn main() {
 
     tracing_subscriber::registry()
         .with(EnvFilter::from_env("AMECA_LOG_LEVEL"))
-        // .with(console_layer)
         .with(
             tracing_subscriber::fmt::layer()
                 .with_writer(all_files)

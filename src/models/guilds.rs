@@ -13,8 +13,8 @@ pub struct Guild {
 }
 
 pub trait GuildData {
-    async fn joined_guild(db: &Database, members: u64, guild_id: GuildId);
-    async fn get_all_guilds(db: &Database) -> Option<Vec<Guild>>;
+    fn joined_guild(db: &Database, members: u64, guild_id: GuildId) -> impl std::future::Future<Output = ()> + Send;
+    fn get_all_guilds(db: &Database) -> impl std::future::Future<Output = Option<Vec<Guild>>> + Send;
 }
 
 impl GuildData for Database {
