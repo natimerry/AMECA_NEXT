@@ -1,3 +1,4 @@
+#![feature(async_closure)]
 pub mod bot;
 mod db;
 pub mod models;

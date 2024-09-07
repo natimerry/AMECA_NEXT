@@ -33,7 +33,7 @@ impl UserData for Database {
         let mem = Members {
             admin: false,
             banned: false,
-            name: user.name,
+            name: (user.name).to_string(),
             warnings_issued: 0,
         };
         debug!("Storing user {:#?}", &mem);
@@ -46,7 +46,7 @@ impl UserData for Database {
 
         match created_user {
             Ok(msg) => {
-                debug!("Stored msg successfully {:?}", msg);
+                debug!("Stored user successfully {:?}", user);
                 // todo: relate message to author after user database model is created
             }
             Err(e) => {
