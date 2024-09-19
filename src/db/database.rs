@@ -51,7 +51,6 @@ impl Database {
                 }
                 Err(e) => {
                     error!("{}", e.to_string());
-                    panic!();
                 }
             }
         }

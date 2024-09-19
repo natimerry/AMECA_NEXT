@@ -37,6 +37,7 @@ impl AMECA {
             Some(message) => {
                 let content = &message.content;
                 Some(crate::models::messages::Message {
+                    message_id: deleted_message_id.get() as i64,
                     time: (&message.timestamp.to_string()).parse().unwrap(),
                     content: content.to_string(),
                 })

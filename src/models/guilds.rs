@@ -11,7 +11,7 @@ pub struct Guild {
     pub guild_id: String,
     pub time_of_join: DateTime<Utc>,
     pub members: u64,
-    pub logging_channel: u64,
+    pub logging_channel: Option<i64>,
     pub systems_channel: u64,
 }
 
@@ -33,12 +33,12 @@ impl GuildData for Database {
         info!("Registering new GUILD in the database");
         let created_guild: Result<Option<Guild>, surrealdb::Error> = db
             .client
-            .create(("guild", guild_id.get()))
+            .create(("guild", guild_id.get() as i64))
             .content(Guild {
                 members,
                 guild_id: guild_id.to_string(),
                 time_of_join: Utc::now(),
-                logging_channel: 0,
+                logging_channel: None,
                 systems_channel: 0,
             })
             .await;

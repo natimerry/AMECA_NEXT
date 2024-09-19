@@ -5,7 +5,9 @@ use crate::models::messages::MessageData;
 use crate::models::users::*;
 use serenity::all::standard::buckets::RateLimitInfo;
 use serenity::all::{
-    ChannelId, ChannelType, Context, CreateCommand, CreateInteractionResponse, CreateInteractionResponseMessage, EventHandler, GatewayIntents, Guild, GuildChannel, GuildId, Interaction, Message, MessageId, MessagePagination, RatelimitInfo, Ready, Settings, User
+    ChannelId, ChannelType, Context, CreateCommand, CreateInteractionResponse,
+    CreateInteractionResponseMessage, EventHandler, GatewayIntents, Guild, GuildChannel, GuildId,
+    Interaction, Message, MessageId, MessagePagination, RatelimitInfo, Ready, Settings, User,
 };
 use serenity::model::guild;
 use serenity::Client;
@@ -23,7 +25,7 @@ pub(crate) struct AMECA {
 
 const GUILD_COMMANDS: LazyCell<Vec<CreateCommand>> = LazyCell::new(|| {
     info!("Lazilly initialising commands to register");
-    vec![commands::hello::register()]
+    vec![commands::test_command::register()]
 });
 
 #[serenity::async_trait]
@@ -63,6 +65,7 @@ impl EventHandler for AMECA {
                 let msg = Database::fetch_msg(&self.db, deleted_message_id.get())
                     .await
                     .unwrap_or(crate::models::messages::Message {
+                        message_id: 0,
                         time: "placeholder".to_string(),
                         content: "placeholder".to_string(),
                     });
@@ -82,30 +85,30 @@ impl EventHandler for AMECA {
         if self.test {
             let guild_token = std::env::var("GUILD_ID").unwrap().parse::<u64>().unwrap();
             let guild_id = GuildId::from(guild_token);
+            debug!("Registering commands");
             Self::set_commands(&ctx, GUILD_COMMANDS.to_vec(), guild_id).await;
             return;
         }
 
-        let fuck_me = ctx.http.get_guilds(None,None).await;
-
+        let fuck_me = ctx.http.get_guilds(None, None).await;
 
         match fuck_me {
             Ok(guilds) => {
                 for guild in guilds {
                     let guild_id = guild.id;
                     let ctx_binding = ctx.clone(); // create lifetime 'b that lives long enough for the future to be awaited
-                    tokio::spawn(async move{
+                    tokio::spawn(async move {
                         // we cannot move ctx inside this scope as this moves ownerwship of 'ctx to this future, which 'ctx after it has been awaited
-                        // why the fuck does ctx not implement the Copy trait 
+                        // why the fuck does ctx not implement the Copy trait
+                        debug!("Registering commands from CTX");
                         Self::set_commands(&ctx_binding, GUILD_COMMANDS.to_vec(), guild_id).await;
                     });
-                    
 
                     info!("Starting warm-up cache.");
                     let join_handle = AMECA::warm_up_cache(ctx.clone(), guild_id.clone()).await; // create new ctx lifetime 'c since 'c gets freed after the loop iteration
-                                                                                                                // 'c needs to live till the future is awaited which may be after loop iteration
+                                                                                                 // 'c needs to live till the future is awaited which may be after loop iteration
                     join_handle.await.expect("Failed to join warm up threads");
-            
+
                     info!("Finished warming up cache!");
                 }
             }
@@ -118,7 +121,7 @@ impl EventHandler for AMECA {
     }
     async fn ratelimit(&self, data: RatelimitInfo) {
         info!("AMECA has been ratelimited.");
-        info!("{:?}",data);
+        info!("{:?}", data);
     }
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         if let Interaction::Command(command) = interaction {
@@ -129,13 +132,15 @@ impl EventHandler for AMECA {
                     command.user.name
                 )
             );
-            let content = match command.data.name.as_str() {
-                "helloameca" => Some(commands::hello::run(&command.data.options())),
-                _ => Some("ACHIEVMENT: how did we get here?".to_string()),
+            let response = match command.data.name.as_str() {
+                "test_command" => {
+                    Some(commands::test_command::run(&ctx, &command.data.options(), &self.db,command.guild_id.unwrap()).await)
+                }
+                _ => None,
             };
 
-            if let Some(content) = content {
-                let data = CreateInteractionResponseMessage::new().content(content);
+            if let Some(Ok(embed)) = response {
+                let data = CreateInteractionResponseMessage::new().embed(embed);
                 let builder = CreateInteractionResponse::Message(data);
                 if let Err(why) = command.create_response(&ctx.http, builder).await {
                     error!("Cannot respond to slash command: {why}");
@@ -146,7 +151,7 @@ impl EventHandler for AMECA {
 }
 
 enum DataType<'a, 'b, 'c> {
-    Channel(&'a Vec<GuildChannel>),
+    Channel(&'a Vec<GuildChannel>, &'a GuildId),
     User(&'b Vec<User>),
     Message(&'c Vec<Message>, GuildChannel),
 }
@@ -167,9 +172,9 @@ impl AMECA {
         let new_db = new_db.unwrap();
 
         match data {
-            DataType::Channel(channel_vec) => {
+            DataType::Channel(channel_vec, guildid) => {
                 for channel in channel_vec {
-                    Database::new_channel(&new_db, channel.clone()).await;
+                    Database::new_channel(&new_db, channel.clone(), *guildid).await;
                 }
             }
             DataType::User(user_vec) => {
@@ -209,7 +214,7 @@ impl AMECA {
         info!("Creating new concurrency thread!");
         let t = tokio::spawn(async move {
             let channels = AMECA::get_channels(&ctx, guild_id).await;
-            AMECA::store_in_db(DataType::Channel(&channels)).await;
+            AMECA::store_in_db(DataType::Channel(&channels, &guild_id)).await;
             let members = AMECA::get_members(&ctx, guild_id).await;
             AMECA::store_in_db(DataType::User(&members)).await;
 
@@ -303,11 +308,16 @@ impl AMECA {
 
     async fn set_commands(ctx: &Context, commands: Vec<CreateCommand>, guild_id: GuildId) {
         let commands = guild_id.set_commands(&ctx.http, commands).await;
-
-        debug!(
-            "Registering the following commands: {commands:#?} for guild: {:#?}",
-            guild_id.get()
-        );
-
+        match commands {
+            Ok(commands) => {
+                debug!(
+                    "Registering the following commands: {commands:#?} for guild: {:#?}",
+                    guild_id.get()
+                );
+            }
+            Err(e) => {
+                error!("{:?}", e);
+            }
+        }
     }
 }

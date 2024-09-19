@@ -20,6 +20,7 @@ where
 }
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Members {
+    pub member_id: i64,
     pub admin: bool,
     pub banned: bool,
     pub name: String, // real name
@@ -31,6 +32,7 @@ impl UserData for Database {
     async fn new_user(db: &Database, user: serenity::all::User) {
         debug!("Storing user {}", &user);
         let mem = Members {
+            member_id: user.id.get() as i64,
             admin: false,
             banned: false,
             name: (user.name).to_string(),
@@ -40,7 +42,7 @@ impl UserData for Database {
 
         let created_user: Result<Option<Members>, surrealdb::Error> = db
             .client
-            .create(("members", user.id.get()))
+            .create(("members", user.id.get() as i64))
             .content(mem)
             .await;
 

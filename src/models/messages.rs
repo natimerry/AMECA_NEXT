@@ -6,6 +6,7 @@ use tracing::{error, warn};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Message {
+    pub message_id: i64,
     pub time: String,
     pub content: String,
 }
@@ -27,16 +28,17 @@ impl MessageData for Database {
         let msg_id = msg.id.get();
         let created_msg: Result<Option<Message>, surrealdb::Error> = db
             .client
-            .create(("message", msg_id))
-            .content(Message {
+            .create(("message", msg_id as i64))
+            .content((Message {
                 content: msg.content,
+                message_id: msg_id as i64,
                 time: msg.timestamp.to_string(),
-            })
-            .await;
+            }))
+            .await; 
 
         // TODO: set relation
         let query = format!(
-            "RELATE channel:{}->sent->message:{};",
+            "RELATE channel:{}->sent_in_channel->message:{};",
             channel.id.get(),
             msg_id
         );
