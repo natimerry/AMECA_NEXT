@@ -1,0 +1,15 @@
+[package]
+name = "ameca_pg"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serenity = { version = "0.12.2", features = ["full"] }
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["tracing", "env-filter"] }
+tokio = { version = "1.36.0", features = ["full"] }
+tracing-appender = "0.2.3"
+dotenv = "0.15.0"
+sqlx = {version = "0.8.2",features = ["derive","chrono","postgres","runtime-tokio"]}
+[patch.crates-io]
+serenity = { git = "https://github.com/serenity-rs/serenity", branch = "current" }
