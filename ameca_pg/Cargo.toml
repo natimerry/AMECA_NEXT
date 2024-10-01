@@ -12,5 +12,6 @@ tracing-appender = "0.2.3"
 dotenv = "0.15.0"
 sqlx = {version = "0.8.2",features = ["derive","chrono","postgres","runtime-tokio"]}
 poise = "0.6.1"
+log = "0.4.22"
 [patch.crates-io]
 serenity = { git = "https://github.com/serenity-rs/serenity", branch = "current" }

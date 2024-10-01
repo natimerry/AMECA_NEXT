@@ -49,6 +49,7 @@ name = "ameca_pg"
 version = "0.1.0"
 dependencies = [
  "dotenv",
+ "log",
  "poise",
  "serenity",
  "sqlx",
