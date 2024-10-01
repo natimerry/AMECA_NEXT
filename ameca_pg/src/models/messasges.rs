@@ -28,6 +28,23 @@ pub trait MessageData {
     ) -> impl std::future::Future<Output = BoxResult<Option<Message>>> + Send;
 }
 
+impl Message {
+    async fn create_msg_author(db: &PgPool, author: User) -> BoxResult<()> {
+        // if a message author doesnt exist in the database create one
+        let db_author = sqlx::query_as::<_,Members>(
+            "SELECT member_id,name,admin,warnings_issued FROM member WHERE member_id = $1",
+        )
+        .bind(author.id.get() as i64)
+        .fetch_optional(db)
+        .await?;
+
+        if let None = db_author {
+            warn!("Message author is not cached!");
+            PgPool::new_user(&db, author).await?;
+        }
+        Ok(())
+    }
+}
 impl MessageData for Pool<Postgres> {
     async fn new_message(
         db: &Pool<Postgres>,
@@ -39,8 +56,8 @@ impl MessageData for Pool<Postgres> {
         let msg_time = msg.timestamp.naive_utc();
         let author =  i64::from(msg.author.id);
 
-
-        sqlx::query!(
+        Message::create_msg_author(db,msg.author).await?;
+        let _msg = sqlx::query!(
             "INSERT INTO message(msg_id, content, time, author_id) VALUES ($1, $2, $3, $4)",
             msg_id,
             msg_content,
