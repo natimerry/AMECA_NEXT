@@ -26,8 +26,9 @@ impl ChannelData for Pool<Postgres> {
         debug!("Inserting channel into database");
         let channel_id = channel.id.get() as i64;
         let guild_id = guild.get() as i64;
-        sqlx::query!("INSERT INTO channel (channel_id, guild_id,logging_channel,muted) VALUES ($1, $2, $3, $4)"
+        let _channel = sqlx::query!("INSERT INTO channel (channel_id, guild_id,logging_channel,muted) VALUES ($1, $2, $3, $4)"
             ,channel_id, guild_id, false, false).execute(db).await?;
+        debug!("channel insertion result: {:?}", _channel);
 
         Ok(())
     }
