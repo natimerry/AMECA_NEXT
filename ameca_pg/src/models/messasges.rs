@@ -36,7 +36,7 @@ impl MessageData for Pool<Postgres> {
         let msg_id = msg.id.get() as i64;
         let msg_content = msg.content;
         let msg_time = msg.timestamp.naive_utc();
-
+        let author =  i64::from(msg.author.id);
 
 
         sqlx::query!(
@@ -46,7 +46,9 @@ impl MessageData for Pool<Postgres> {
             msg_time,
             msg.author.id.get() as i64
         ).execute(db).await?;
+        .execute(db)
         debug!("Created new message {}", msg_id);
+        debug!("Message insertion result {:?}", _msg);
         Ok(())
     }
     async fn fetch_messages(
