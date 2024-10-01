@@ -4,30 +4,31 @@ use sqlx::{FromRow, Pool, Postgres};
 use std::future::Future;
 use tracing::{debug, info};
 
-#[derive(Debug,FromRow)]
+#[derive(Debug, FromRow)]
 pub struct Channel {
     pub channel_id: i64,
     pub muted: bool,
     pub logging_channel: bool,
+    pub channel_name: String,
     #[sqlx(rename = "guild_id")]
-    pub parent_guild_id: i64,
+    pub parent_guild_id: Option<i64>,
 }
 
 pub trait ChannelData {
     fn new_channel(
         db: &Pool<Postgres>,
         channel: GuildChannel,
-        guild: GuildId,
     ) -> impl std::future::Future<Output = BoxResult<()>> + Send;
 }
 
 impl ChannelData for Pool<Postgres> {
-    async fn new_channel(db: &Pool<Postgres>, channel: GuildChannel, guild: GuildId) -> BoxResult<()>{
+    async fn new_channel(db: &Pool<Postgres>, channel: GuildChannel) -> BoxResult<()> {
         debug!("Inserting channel into database");
         let channel_id = channel.id.get() as i64;
-        let guild_id = guild.get() as i64;
-        let _channel = sqlx::query!("INSERT INTO channel (channel_id, guild_id,logging_channel,muted) VALUES ($1, $2, $3, $4)"
-            ,channel_id, guild_id, false, false).execute(db).await?;
+        let guild_id:Option<i64> = None;
+        // TODO: create guild before channel to ensure healthy relationship
+        let _channel = sqlx::query!("INSERT INTO channel (channel_id, guild_id,logging_channel,muted,channel_name) VALUES ($1, $2, $3, $4,$5)"
+            ,channel_id, guild_id, false, false,channel.name).execute(db).await?;
         debug!("channel insertion result: {:?}", _channel);
 
         Ok(())
