@@ -1,1 +1,7 @@
--- Add down migration script here
+DROP TABLE IF EXISTS guild CASCADE ;
+DROP TABLE IF EXISTS message CASCADE ;
+DROP TABLE IF EXISTS member CASCADE ;
+DROP TABLE IF EXISTS channel CASCADE ;
+
+DROP TABLE IF EXISTS banned CASCADE ;
+DROP TABLE IF EXISTS guild_join_member CASCADE ;
