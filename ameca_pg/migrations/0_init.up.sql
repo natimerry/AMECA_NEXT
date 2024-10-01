@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS member(
                                      member_id BIGINT PRIMARY KEY,
                                      admin BOOLEAN,
                                      name VARCHAR(255) NOT NULL,
-                                     warnings_issuesd INT
+                                     warnings_issued INT
 );
 
 CREATE TABLE IF NOT EXISTS message(
