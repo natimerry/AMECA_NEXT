@@ -1,10 +1,11 @@
+use crate::models::member::{MemberData, Members};
 use crate::BoxResult;
 use poise::serenity_prelude as serenity;
-use serenity::all::GuildChannel;
+use serenity::all::{GuildChannel, Member, User};
 use sqlx::types::chrono::{DateTime, Utc};
-use sqlx::{FromRow, Pool, Postgres};
+use sqlx::{FromRow, PgPool, Pool, Postgres};
 use std::future::Future;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 #[derive(FromRow, Debug)]
 pub struct Message {
@@ -44,9 +45,10 @@ impl MessageData for Pool<Postgres> {
             msg_id,
             msg_content,
             msg_time,
-            msg.author.id.get() as i64
-        ).execute(db).await?;
+            author
+        )
         .execute(db)
+        .await?;
         debug!("Created new message {}", msg_id);
         debug!("Message insertion result {:?}", _msg);
         Ok(())

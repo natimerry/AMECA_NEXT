@@ -5,7 +5,7 @@ use sqlx::{ FromRow, Pool, Postgres};
 
 use poise::serenity_prelude as serenity;
 use serenity::all::GuildId;
-use tracing::info;
+use tracing::{debug, info};
 use crate::BoxResult;
 
 #[derive(FromRow, Debug)]
@@ -28,6 +28,8 @@ impl GuildData for Pool<Postgres> {
             members,
             Utc::now().naive_utc()
         ).execute(db).await.unwrap();
+
+        debug!("guild insertion result: {:?}", _guild);
         Ok(())
     }
 }
