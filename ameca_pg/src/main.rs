@@ -42,10 +42,12 @@ async fn main() {
     tracing_subscriber::registry()
         .with(
             EnvFilter::builder()
-                .with_default_directive(LevelFilter::INFO.into())
+                .with_default_directive(LevelFilter::TRACE.into())
                 .from_env()
                 .expect("Unable to read log level"),
-        )
+        ).with(
+        EnvFilter::from_env("LOG_LEVEL")
+    )
         .with(
             tracing_subscriber::fmt::layer()
                 .with_writer(all_files)
