@@ -27,6 +27,8 @@ impl AMECA {
                     error!("Unable to store message in db: {}", e);
                 }
             },
+                automod::on_msg(new_message.clone(), &data.db ).await?;
+            }
             _ => (),
         }
         Ok(())
