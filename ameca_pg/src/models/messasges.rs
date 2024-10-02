@@ -22,12 +22,12 @@ pub trait MessageData {
         db: &Pool<Postgres>,
         msg: serenity::Message,
         channel: GuildChannel,
-    ) -> impl std::future::Future<Output = BoxResult<()>> + Send;
+    ) -> impl std::future::Future<Output=BoxResult<()>> + Send;
 
     fn fetch_messages(
         db: &Pool<Postgres>,
         channel: GuildChannel,
-    ) -> impl std::future::Future<Output = BoxResult<Option<Message>>> + Send;
+    ) -> impl std::future::Future<Output=BoxResult<Option<Message>>> + Send;
 }
 
 impl Message {
@@ -36,9 +36,9 @@ impl Message {
         let db_author = sqlx::query_as::<_, Members>(
             "SELECT member_id,name,admin,warnings_issued FROM member WHERE member_id = $1",
         )
-        .bind(author.id.get() as i64)
-        .fetch_optional(db)
-        .await?;
+            .bind(author.id.get() as i64)
+            .fetch_optional(db)
+            .await?;
 
         if let None = db_author {
             warn!("Message author is not cached!");
@@ -46,19 +46,19 @@ impl Message {
         }
 
         struct dummychannel {
-            channel_id : i64,
+            channel_id: i64,
         }
         let db_channel = sqlx::query_as!(
             dummychannel,
             "SELECT channel_id FROM channel WHERE channel_id = $1",
              channel.id.get() as i64
         )
-        .fetch_optional(db)
-        .await?;
+            .fetch_optional(db)
+            .await?;
 
         if let None = db_channel {
             warn!("Message channel is not cached!");
-            PgPool::new_channel(&db,channel).await?;
+            PgPool::new_channel(&db, channel).await?;
         }
 
         Ok(())
@@ -78,15 +78,15 @@ impl MessageData for Pool<Postgres> {
 
         Message::check_violations(db, msg.author, channel).await?;
         let _msg = sqlx::query!(
-            "INSERT INTO message(msg_id, content, time, author_id,channel_id) VALUES ($1, $2, $3, $4,$5)",
+            "INSERT INTO message(msg_id, content, time, author_id,channel_id) VALUES ($1, $2, $3, $4,$5) ON CONFLICT DO NOTHING;",
             msg_id,
             msg_content,
             msg_time,
             author,
             msg.channel_id.get() as i64,
         )
-        .execute(db)
-        .await?;
+            .execute(db)
+            .await?;
         debug!("Created new message {}", msg_id);
         debug!("Message insertion result {:?}", _msg);
         Ok(())

@@ -1,3 +1,4 @@
+use clap::Parser;
 use sqlx::{Pool, Postgres};
 use tracing::level_filters::LevelFilter;
 use tracing::{info, Level};
@@ -12,6 +13,13 @@ mod bot;
 
 type DynError = Box<dyn std::error::Error + Send + Sync>;
 type BoxResult<T> = Result<T, DynError>;
+
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    #[arg(long, default_value_t = false)]
+    cache: bool,
+}
 
 
 pub async fn database_init() -> BoxResult<Pool<Postgres>> {
@@ -65,5 +73,7 @@ async fn main() {
     let db = database_init().await.expect("db init failed");
 
     let token = std::env::var("DISCORD_TOKEN").expect("missing DISCORD_TOKEN");
-    AMECA::stard_shard(token, db).await.expect("Error starting shard");
+    let args = Args::parse();
+
+    AMECA::start_shard(token, db, args.cache).await.expect("Error starting shard");
 }

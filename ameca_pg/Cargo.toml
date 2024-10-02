@@ -13,5 +13,7 @@ dotenv = "0.15.0"
 sqlx = {version = "0.8.2",features = ["derive","chrono","postgres","runtime-tokio"]}
 poise = "0.6.1"
 log = "0.4.22"
+clap = { version = "4.5.19", features = ["derive"] }
+regex = "1.11.0"
 [patch.crates-io]
 serenity = { git = "https://github.com/serenity-rs/serenity", branch = "current" }

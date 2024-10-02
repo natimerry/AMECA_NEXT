@@ -26,7 +26,7 @@ impl MemberData for PgPool {
         let name = user.name;
         info!("Inserting new user {} into database",&name);
         let _user = sqlx::query!(
-            "INSERT INTO member(member_id,name,admin,warnings_issued) VALUES($1,$2,$3,$4);",
+            "INSERT INTO member(member_id,name,admin,warnings_issued) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING;",
             user_id,
             name,
             false,
