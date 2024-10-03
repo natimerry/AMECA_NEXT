@@ -1,12 +1,13 @@
-use std::future::Future;
 use sqlx::types::chrono;
 use sqlx::types::chrono::{DateTime, Utc};
-use sqlx::{ FromRow, Pool, Postgres};
+use sqlx::{FromRow, Pool, Postgres};
+use std::future::Future;
 
+use crate::BoxResult;
 use poise::serenity_prelude as serenity;
+use poise::serenity_prelude::GuildInfo;
 use serenity::all::GuildId;
 use tracing::{debug, info};
-use crate::BoxResult;
 
 #[derive(FromRow, Debug)]
 pub struct Guilds {
@@ -16,18 +17,33 @@ pub struct Guilds {
 }
 
 pub trait GuildData {
-    fn joined_guild(db: &Pool<Postgres>, members: i32, guild_id: GuildId) -> impl Future<Output =  BoxResult<()>>;
+    fn joined_guild(
+        db: &Pool<Postgres>,
+        members: i32,
+        guild_id: &GuildId,
+        guild_name: &str
+    ) -> impl Future<Output = BoxResult<()>>;
 }
 
 impl GuildData for Pool<Postgres> {
-    async fn joined_guild(db: &Pool<Postgres>, members: i32, guild_id: GuildId) -> BoxResult<()>{
+    async fn joined_guild(
+        db: &Pool<Postgres>,
+        members: i32,
+        guild_id: &GuildId,
+        guild_name: &str
+    ) -> BoxResult<()> {
         info!("Registering new guild in database");
-        let _guild = sqlx::query!(
-            "INSERT INTO guild (guild_id,members,join_date) VALUES ($1,$2,$3::TIMESTAMPTZ) ON CONFLICT DO NOTHING",
-            guild_id.get() as i64,
+        let guildid = guild_id.get() as i64;
+        let _guild = sqlx::query_file!(
+            "sql/insert_new_guild.sql",
+            guildid,
             members,
-            Utc::now()
-        ).execute(db).await.unwrap();
+            Utc::now(),
+            guild_name
+        )
+        .execute(db)
+        .await
+        .unwrap();
 
         debug!("guild insertion result: {:?}", _guild);
         Ok(())

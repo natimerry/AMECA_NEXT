@@ -1,17 +1,19 @@
 mod automod;
+mod register_to_tc;
 
-use log::{debug, warn};
+use crate::models::channel::ChannelData;
+use crate::models::guilds::GuildData;
+use crate::models::member::MemberData;
+use crate::models::messasges::MessageData;
 use crate::{BoxResult, DynError};
 use poise::builtins::register_globally;
 use poise::{serenity_prelude as serenity, Context};
+use poise::serenity_prelude::GuildInfo;
 use serenity::all::{ChannelType, GuildPagination, Message, MessagePagination, Settings};
 use sqlx::{PgPool, Pool, Postgres};
 use tokio::task::JoinHandle;
+use tracing::log::{debug, warn};
 use tracing::{error, info, trace};
-use crate::models::channel::ChannelData;
-use crate::models::guilds::GuildData;
-use crate::models::messasges::MessageData;
-use crate::models::member::MemberData;
 #[derive(Clone)]
 pub struct AMECA {
     db: Pool<Postgres>,
@@ -26,23 +28,98 @@ impl AMECA {
     ) -> BoxResult<()> {
         match event {
             serenity::FullEvent::Message { new_message } => {
-                info!("New message: {} <{}>:{}", new_message.author.name,new_message.id,new_message.content);
+                info!(
+                    "New message: {} <{}>:{}",
+                    new_message.author.name, new_message.id, new_message.content
+                );
                 let channel = new_message.channel(&ctx.http).await?;
-                let res = PgPool::new_message(&data.db, new_message.clone(), channel.guild().unwrap()).await;
+                let res =
+                    PgPool::new_message(&data.db, new_message.clone(), channel.guild().unwrap())
+                        .await;
 
                 if let Err(e) = res {
                     error!("Unable to store message in db: {}", e);
                 }
-                automod::on_msg(new_message.clone(), &data.db ).await?;
+                automod::on_msg(new_message.clone(), &data.db).await?;
             }
             serenity::FullEvent::Ready { .. } => {
                 info!("Bot is ready to start!");
-                if data.cache{
-                    Self::cache_data(&ctx, data.clone()).await?;
+                if data.cache {
+                    AMECA::cache_data(&ctx, data.clone()).await?;
                 }
                 info!("Bot is ready!");
             }
-            _ => (),
+            serenity::FullEvent::GuildCreate { guild, is_new } => {
+                // bot has been added to a new guild... just generate new guild id for now
+                // TODO: maybe cache?
+                info!("Bot has joined new guild!");
+                PgPool::joined_guild(&data.db, guild.member_count as i32, &guild.id, &*guild.name).await?;
+            },
+            &_ => ()
+        }
+        Ok(())
+    }
+    pub async fn cache_guild(ctx: &serenity::Context, data: &AMECA, guild: GuildInfo) -> BoxResult<()> {
+        let guild_members = ctx.http.get_guild_members(guild.id, None, None).await?;
+        trace!("Received data {:?}", &guild_members);
+        PgPool::joined_guild(&data.db, guild_members.len() as i32, &guild.id, &*guild.name).await?;
+
+        // cache channels and members next
+        for member in guild_members {
+            let created_user =
+                PgPool::new_user(&data.db, member.user.clone()).await;
+            match created_user {
+                Ok(_) => {
+                    let timestamp = member.joined_at.unwrap().naive_utc().and_utc();
+                    PgPool::mark_user_in_guild(
+                        &data.db,
+                        member.user,
+                        guild.id,
+                        timestamp,
+                    )
+                        .await?;
+                }
+                Err(e) => error!("Unable to mark user in guild {}: {}", guild.id, e),
+            }
+        }
+
+        let channels = ctx.http.get_channels(guild.id).await?;
+        trace!("Received data {:?}", &channels);
+
+        let channels = channels
+            .iter()
+            .filter(|x| x.kind == ChannelType::Text)
+            .collect::<Vec<_>>();
+
+        for channel in channels {
+            info!("Storing {}", channel.name);
+            PgPool::new_channel(&data.db, channel.clone()).await?;
+            //iterate over messaes in channel
+            debug!("Storing messsages for channel {}", channel.name);
+            let channel_binding = channel.clone();
+            let last_msg = channel.last_message_id;
+
+            if let Some(last_msg) = last_msg {
+                let msgs = ctx
+                    .http
+                    .get_messages(
+                        channel.id,
+                        Some(MessagePagination::Before(last_msg)),
+                        Some(100),
+                    )
+                    .await?;
+                for msg in msgs {
+                    PgPool::new_message(&data.db, msg, channel_binding.clone())
+                        .await?;
+                }
+            } else {
+                error!("Error in receiving last msg for channels... ");
+                let msgs = ctx.http.get_messages(channel.id, None, Some(100)).await?;
+                for msg in msgs {
+                    PgPool::new_message(&data.db, msg, channel_binding.clone())
+                        .await?;
+                }
+            }
         }
         Ok(())
     }
@@ -54,48 +131,8 @@ impl AMECA {
         let thread: JoinHandle<BoxResult<()>> = tokio::spawn(async move {
             let guilds = ctx.http.get_guilds(None, None).await?;
             trace!("Received data {:?}", &guilds);
-            for guild in &guilds {
-                // store guild in database before continuing
-                let guild_members = ctx.http.get_guild_members(guild.id, None, None).await?;
-                trace!("Received data {:?}", &guild_members);
-                PgPool::joined_guild(&data_binding.db, guild_members.len() as i32, guild.id).await?;
-
-                // cache channels and members next
-                for member in guild_members {
-                    PgPool::new_user(&data_binding.db, member.user).await?;
-                }
-
-                let channels = ctx.http.get_channels(guild.id).await?;
-                trace!("Received data {:?}", &channels);
-
-                let channels = channels.iter().filter(|x| x.kind == ChannelType::Text).collect::<Vec<_>>();
-
-                for channel in channels {
-                    info!("Storing {}",channel.name);
-                    PgPool::new_channel(&data_binding.db, channel.clone()).await?;
-                    //iterate over messaes in channel
-
-                    let channel_binding = channel.clone();
-                    let last_msg = channel.last_message_id;
-
-                    if let Some(last_msg) = last_msg{
-                        let msgs = ctx.http.get_messages(channel.id,
-                                                         Some(MessagePagination::Before(last_msg)),
-                                                         Some(100)).await?;
-                        for msg in msgs {
-                            PgPool::new_message(&data_binding.db, msg, channel_binding.clone()).await?;
-                        }
-                    }
-                    else{
-                        error!("Error in receiving last msg for channels... ");
-                        let msgs = ctx.http.get_messages(channel.id,
-                                                         None,
-                                                         Some(100)).await?;
-                        for msg in msgs {
-                            PgPool::new_message(&data_binding.db, msg, channel_binding.clone()).await?;
-                        }
-                    }
-                }
+            for guild in guilds {
+                AMECA::cache_guild(&ctx, &data, guild).await?;
             }
             Ok(())
         });
@@ -103,7 +140,7 @@ impl AMECA {
 
         Ok(())
     }
-    pub async fn start_shard(token: String, db: Pool<Postgres>, cache:bool) -> BoxResult<()> {
+    pub async fn start_shard(token: String, db: Pool<Postgres>, cache: bool) -> BoxResult<()> {
         let mut settings = Settings::default();
         settings.max_messages = 10000;
 
@@ -111,7 +148,7 @@ impl AMECA {
             .setup(move |ctx, _ready, _framework| {
                 Box::pin(async move {
                     register_globally(ctx, &_framework.options().commands).await?;
-                    Ok(AMECA { db,cache})
+                    Ok(AMECA { db, cache })
                 })
             })
             .options(poise::FrameworkOptions {
@@ -126,6 +163,7 @@ impl AMECA {
             | serenity::GatewayIntents::GUILD_MESSAGES
             | serenity::GatewayIntents::GUILD_MESSAGE_REACTIONS
             | serenity::GatewayIntents::AUTO_MODERATION_EXECUTION
+            | serenity::GatewayIntents::GUILDS
             | serenity::GatewayIntents::privileged();
 
         let client = serenity::ClientBuilder::new(token, intents)

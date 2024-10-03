@@ -22,23 +22,23 @@ pub trait MessageData {
         db: &Pool<Postgres>,
         msg: serenity::Message,
         channel: GuildChannel,
-    ) -> impl std::future::Future<Output=BoxResult<()>> + Send;
+    ) -> impl std::future::Future<Output = BoxResult<()>> + Send;
 
     fn fetch_messages(
         db: &Pool<Postgres>,
         channel: GuildChannel,
-    ) -> impl std::future::Future<Output=BoxResult<Option<Message>>> + Send;
+    ) -> impl std::future::Future<Output = BoxResult<Option<Message>>> + Send;
 }
 
 impl Message {
     async fn check_violations(db: &PgPool, author: User, channel: GuildChannel) -> BoxResult<()> {
         // if a message author doesnt exist in the database create one
         let db_author = sqlx::query_as::<_, Members>(
-            "SELECT member_id,name,admin,warnings_issued FROM member WHERE member_id = $1",
+            "SELECT member_id,name,warnings_issued FROM member WHERE member_id = $1",
         )
-            .bind(author.id.get() as i64)
-            .fetch_optional(db)
-            .await?;
+        .bind(author.id.get() as i64)
+        .fetch_optional(db)
+        .await?;
 
         if let None = db_author {
             warn!("Message author is not cached!");
@@ -51,10 +51,10 @@ impl Message {
         let db_channel = sqlx::query_as!(
             dummychannel,
             "SELECT channel_id FROM channel WHERE channel_id = $1",
-             channel.id.get() as i64
+            channel.id.get() as i64
         )
-            .fetch_optional(db)
-            .await?;
+        .fetch_optional(db)
+        .await?;
 
         if let None = db_channel {
             warn!("Message channel is not cached!");

@@ -1,4 +1,5 @@
 use crate::BoxResult;
+use poise::serenity_prelude as serenity;
 use serenity::all::{GuildChannel, GuildId};
 use sqlx::{FromRow, Pool, Postgres};
 use std::future::Future;
@@ -18,7 +19,7 @@ pub trait ChannelData {
     fn new_channel(
         db: &Pool<Postgres>,
         channel: GuildChannel,
-    ) -> impl std::future::Future<Output=BoxResult<()>> + Send;
+    ) -> impl std::future::Future<Output = BoxResult<()>> + Send;
 }
 
 impl ChannelData for Pool<Postgres> {

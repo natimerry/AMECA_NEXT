@@ -1,14 +1,16 @@
+use crate::BoxResult;
+use poise::serenity_prelude::{Guild, GuildId};
+use poise::{serenity_prelude as serenity, Context};
 use serenity::all::User;
+use sqlx::types::chrono::{DateTime, Utc};
 use sqlx::{FromRow, PgPool};
 use std::future::Future;
-use log::info;
 use tracing::debug;
-use crate::BoxResult;
+use tracing::log::{info, trace};
 
 #[derive(Debug, FromRow)]
 pub struct Members {
     pub member_id: i64,
-    pub admin: bool,
     pub name: String, // real name
     pub warnings_issued: i32,
 }
@@ -18,21 +20,47 @@ pub trait MemberData {
         db: &PgPool,
         user: serenity::all::User,
     ) -> impl std::future::Future<Output = BoxResult<()>> + Send;
+
+    fn mark_user_in_guild(
+        db: &PgPool,
+        user: User,
+        guild: GuildId,
+        time: DateTime<Utc>,
+    ) -> impl Future<Output = BoxResult<()>> + Send;
 }
 
 impl MemberData for PgPool {
-    async fn new_user(db: &PgPool, user: User) -> BoxResult<()>{
+    async fn mark_user_in_guild(
+        db: &PgPool,
+        user: User,
+        guild: GuildId,
+        time: DateTime<Utc>,
+    ) -> BoxResult<()> {
+        let user_id = user.id.get() as i64;
+        let guild_id = guild.get() as i64;
+
+        debug!(
+            "Setting guild member relation for {}->{}",
+            user_id, guild_id
+        );
+        let _ = sqlx::query!("INSERT INTO guild_join_member(guild_id, member_id, time) VALUES ($1,$2,$3::timestamptz) ON CONFLICT DO NOTHING",
+            guild_id,
+            user_id,
+            time).execute(db).await?;
+
+        Ok(())
+    }
+    async fn new_user(db: &PgPool, user: User) -> BoxResult<()> {
         let user_id = user.id.get() as i64;
         let name = user.name;
-        info!("Inserting new user {} into database",&name);
+        info!("Inserting new user {} into database", &name);
         let _user = sqlx::query!(
-            "INSERT INTO member(member_id,name,admin,warnings_issued) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING;",
+            "INSERT INTO member(member_id,name,warnings_issued) VALUES($1,$2,$3) ON CONFLICT DO NOTHING;",
             user_id,
             name,
-            false,
             0
         ).execute(db).await?;
-        debug!("User insertion query result: {:?}", _user);
+        trace!("User insertion query result: {:?}", _user);
         Ok(())
     }
 }
