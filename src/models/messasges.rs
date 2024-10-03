@@ -1,12 +1,11 @@
-use crate::models::channel::{Channel, ChannelData};
+use crate::models::channel::ChannelData;
 use crate::models::member::{MemberData, Members};
 use crate::BoxResult;
 use poise::serenity_prelude as serenity;
-use serenity::all::{ChannelId, GuildChannel, GuildId, Member, User};
+use serenity::all::{GuildChannel, User};
 use sqlx::types::chrono::{DateTime, Utc};
 use sqlx::{FromRow, PgPool, Pool, Postgres};
-use std::future::Future;
-use tracing::{debug, info, warn};
+use tracing::{debug, warn};
 
 #[derive(FromRow, Debug)]
 pub struct Message {

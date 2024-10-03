@@ -7,12 +7,12 @@ use crate::models::member::MemberData;
 use crate::models::messasges::MessageData;
 use crate::{BoxResult, DynError};
 use poise::builtins::register_globally;
-use poise::{serenity_prelude as serenity, Context};
+use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::GuildInfo;
-use serenity::all::{ChannelType, GuildPagination, Message, MessagePagination, Settings};
+use serenity::all::{ChannelType, MessagePagination, Settings};
 use sqlx::{PgPool, Pool, Postgres};
 use tokio::task::JoinHandle;
-use tracing::log::{debug, warn};
+use tracing::log::debug;
 use tracing::{error, info, trace};
 #[derive(Clone)]
 pub struct AMECA {

@@ -1,10 +1,7 @@
-use crate::bot::AMECA;
 use crate::BoxResult;
 use poise::serenity_prelude as serenity;
-use poise::Context;
 use serenity::all::Message;
 use sqlx::{FromRow, PgPool};
-use std::sync::atomic::{AtomicI32, AtomicUsize};
 use tracing::{info, trace};
 #[derive(FromRow, Debug)]
 struct Banned {

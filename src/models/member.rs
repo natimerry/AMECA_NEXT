@@ -1,6 +1,6 @@
 use crate::BoxResult;
-use poise::serenity_prelude::{Guild, GuildId};
-use poise::{serenity_prelude as serenity, Context};
+use poise::serenity_prelude::GuildId;
+use poise::serenity_prelude as serenity;
 use serenity::all::User;
 use sqlx::types::chrono::{DateTime, Utc};
 use sqlx::{FromRow, PgPool};

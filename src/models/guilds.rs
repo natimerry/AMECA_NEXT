@@ -1,11 +1,9 @@
-use sqlx::types::chrono;
 use sqlx::types::chrono::{DateTime, Utc};
 use sqlx::{FromRow, Pool, Postgres};
 use std::future::Future;
 
 use crate::BoxResult;
 use poise::serenity_prelude as serenity;
-use poise::serenity_prelude::GuildInfo;
 use serenity::all::GuildId;
 use tracing::{debug, info};
 

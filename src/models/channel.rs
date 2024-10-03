@@ -1,9 +1,8 @@
 use crate::BoxResult;
 use poise::serenity_prelude as serenity;
-use serenity::all::{GuildChannel, GuildId};
+use serenity::all::GuildChannel;
 use sqlx::{FromRow, Pool, Postgres};
-use std::future::Future;
-use tracing::{debug, info};
+use tracing::debug;
 
 #[derive(Debug, FromRow)]
 pub struct Channel {
