@@ -14,7 +14,7 @@ type Context<'a> = poise::Context<'a, AMECA, DynError>;
 async fn autocomplete_channel<'a>(
     ctx: Context<'_>,
     partial: &'a str,
-) -> impl Stream<Item = String> + 'a {
+) -> impl Stream<Item=String> + 'a {
     let guild_id = ctx.guild_id().expect("Cannot get guild ID");
 
     let channel_name = sqlx::query_as::<_, Channel>("SELECT * from channel WHERE guild_id = $1")
@@ -40,12 +40,14 @@ pub async fn check_existing_log_channel(
     let x = sqlx::query_as::<_, Channel>(
         "SELECT * FROM channel WHERE guild_id = $1 AND logging_channel = true",
     )
-    .bind(guild_id)
-    .fetch_optional(pool)
-    .await?;
+        .bind(guild_id)
+        .fetch_optional(pool)
+        .await?;
 
     Ok(x)
 }
+
+
 #[command(slash_command)]
 pub async fn register_logging_channel(
     ctx: Context<'_>,
@@ -55,11 +57,11 @@ pub async fn register_logging_channel(
 ) -> BoxResult<()> {
     let channel_id = channel.id().get() as i64;
     let guild_id = ctx.guild_id().expect("Cannot get guild ID").get() as i64;
-    
+
     match check_existing_log_channel(guild_id, &ctx.data().db).await {
         Ok(Some(channel)) => {
             ctx.say("Logging channel already registered").await?;
-            ctx.say(format!("Deregister existing channel {} <{}>",channel.channel_id,channel.channel_name)).await?;
+            ctx.say(format!("Deregister existing channel {} <{}>", channel.channel_id, channel.channel_name)).await?;
             return Ok(());
         }
         Ok(None) => (),
@@ -81,8 +83,8 @@ pub async fn register_logging_channel(
         guild_id,
         channel_id
     )
-    .execute(&ctx.data().db)
-    .await;
+        .execute(&ctx.data().db)
+        .await;
     match x {
         Ok(affected_rows) => {
             debug!("Insertion affected {} rows", affected_rows.rows_affected());

@@ -4,15 +4,11 @@ use std::future::Future;
 
 use crate::BoxResult;
 use poise::serenity_prelude as serenity;
+use poise::serenity_prelude::Member;
 use serenity::all::GuildId;
-use tracing::{debug, info};
+use tracing::{debug, info, trace};
+use crate::models::channel::Channel;
 
-#[derive(FromRow, Debug)]
-pub struct Guilds {
-    pub guild_id: i64,
-    pub join_date: DateTime<Utc>,
-    pub members: i32,
-}
 
 pub trait GuildData {
     fn joined_guild(
@@ -20,6 +16,7 @@ pub trait GuildData {
         members: i32,
         guild_id: &GuildId,
         guild_name: &str,
+        join_time: DateTime<Utc>,
     ) -> impl Future<Output=BoxResult<()>>;
 }
 
@@ -29,6 +26,7 @@ impl GuildData for Pool<Postgres> {
         members: i32,
         guild_id: &GuildId,
         guild_name: &str,
+        join_time: DateTime<Utc>,
     ) -> BoxResult<()> {
         info!("Registering new guild in database");
         let guildid = guild_id.get() as i64;
@@ -36,14 +34,14 @@ impl GuildData for Pool<Postgres> {
             "sql/insert_new_guild.sql",
             guildid,
             members,
-            Utc::now(),
+            join_time,
             guild_name
         )
             .execute(db)
             .await
             .unwrap();
 
-        debug!("guild insertion result: {:?}", _guild);
+        trace!("guild insertion result: {:?}", _guild);
         Ok(())
     }
 }
@@ -55,7 +53,7 @@ mod tests {
     use sqlx::types::chrono::Utc;
     use tracing::debug;
     use crate::BoxResult;
-    use crate::models::guilds::{GuildData, Guilds};
+    use crate::models::guilds::{GuildData};
 
     #[sqlx::test]
     async fn insert_guild(pool: PgPool) -> BoxResult<()> {

@@ -1,19 +1,33 @@
 use crate::models::channel::ChannelData;
 use crate::models::member::{MemberData, Members};
-use crate::BoxResult;
+use crate::{models, BoxResult};
 use poise::serenity_prelude as serenity;
 use serenity::all::{GuildChannel, User};
 use sqlx::types::chrono::{DateTime, Utc};
 use sqlx::{FromRow, PgPool, Pool, Postgres};
+use std::fmt::Write;
+use poise::serenity_prelude::MessageId;
 use tracing::{debug, warn};
 
-#[derive(FromRow, Debug)]
-pub struct Message {
-    msg_id: i64,
-    content: String,
-    time: DateTime<Utc>,
-    author_id: i64,
-    channel_id: i64,
+#[derive(FromRow, Clone, Debug, Default)]
+pub struct DbMessage {
+    pub msg_id: i64,
+    pub content: String,
+    pub time: DateTime<Utc>,
+    pub author_id: i64,
+    pub channel_id: i64,
+}
+
+impl From<serenity::Message> for DbMessage {
+    fn from(msg: serenity::Message) -> Self {
+        Self {
+            msg_id: msg.id.get() as i64,
+            content: msg.content,
+            time: *msg.timestamp,
+            author_id: msg.author.id.get() as i64,
+            channel_id: msg.channel_id.get() as i64,
+        }
+    }
 }
 
 pub trait MessageData {
@@ -23,13 +37,13 @@ pub trait MessageData {
         channel: GuildChannel,
     ) -> impl std::future::Future<Output = BoxResult<()>> + Send;
 
-    fn fetch_messages(
+    fn fetch_message(
         db: &Pool<Postgres>,
-        channel: GuildChannel,
-    ) -> impl std::future::Future<Output = BoxResult<Option<Message>>> + Send;
+        channel: &MessageId,
+    ) -> impl std::future::Future<Output = BoxResult<Option<DbMessage>>> + Send;
 }
 
-impl Message {
+impl DbMessage {
     async fn check_violations(db: &PgPool, author: User, channel: GuildChannel) -> BoxResult<()> {
         // if a message author doesnt exist in the database create one
         let db_author = sqlx::query_as::<_, Members>(
@@ -57,13 +71,13 @@ impl Message {
 
         if let None = db_channel {
             warn!("Message channel is not cached!");
-            PgPool::new_channel(&db, channel).await?;
+            models::channel::Channel::new_channel(&db, &channel).await?;
         }
 
         Ok(())
     }
 }
-impl MessageData for Pool<Postgres> {
+impl MessageData for DbMessage {
     async fn new_message(
         db: &Pool<Postgres>,
         msg: serenity::all::Message,
@@ -75,7 +89,7 @@ impl MessageData for Pool<Postgres> {
         let author = i64::from(msg.author.id);
         let guild = channel.guild_id;
 
-        Message::check_violations(db, msg.author, channel).await?;
+        DbMessage::check_violations(db, msg.author, channel).await?;
         let _msg = sqlx::query!(
             "INSERT INTO message(msg_id, content, time, author_id,channel_id) VALUES ($1, $2, $3, $4,$5) ON CONFLICT DO NOTHING;",
             msg_id,
@@ -90,10 +104,12 @@ impl MessageData for Pool<Postgres> {
         debug!("Message insertion result {:?}", _msg);
         Ok(())
     }
-    async fn fetch_messages(
-        db: &Pool<Postgres>,
-        channel: GuildChannel,
-    ) -> BoxResult<Option<Message>> {
-        unimplemented!()
+    async fn fetch_message(db: &Pool<Postgres>, msg_id: &MessageId) -> BoxResult<Option<DbMessage>> {
+        Ok(
+            (sqlx::query_as::<_, DbMessage>("SELECT * FROM message WHERE msg_id = $1;")
+                .bind(msg_id.get()as i64)
+                .fetch_optional(&*db)
+                .await?),
+        )
     }
 }
