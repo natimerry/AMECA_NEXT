@@ -1,12 +1,13 @@
 use crate::models::channel::ChannelData;
 use crate::models::member::{MemberData, Members};
 use crate::{models, BoxResult};
+use log::trace;
 use poise::serenity_prelude as serenity;
+use poise::serenity_prelude::MessageId;
 use serenity::all::{GuildChannel, User};
 use sqlx::types::chrono::{DateTime, Utc};
 use sqlx::{FromRow, PgPool, Pool, Postgres};
 use std::fmt::Write;
-use poise::serenity_prelude::MessageId;
 use tracing::{debug, warn};
 
 #[derive(FromRow, Clone, Debug, Default)]
@@ -16,6 +17,7 @@ pub struct DbMessage {
     pub time: DateTime<Utc>,
     pub author_id: i64,
     pub channel_id: i64,
+    pub deleted: bool,
 }
 
 impl From<serenity::Message> for DbMessage {
@@ -26,6 +28,7 @@ impl From<serenity::Message> for DbMessage {
             time: *msg.timestamp,
             author_id: msg.author.id.get() as i64,
             channel_id: msg.channel_id.get() as i64,
+            deleted: false,
         }
     }
 }
@@ -44,7 +47,17 @@ pub trait MessageData {
 }
 
 impl DbMessage {
-    async fn check_violations(db: &PgPool, author: User, channel: GuildChannel) -> BoxResult<()> {
+    pub async fn mark_deleted(&mut self, db: &PgPool) -> BoxResult<()> {
+        self.deleted = true;
+        sqlx::query!(
+            "UPDATE message set deleted = true WHERE msg_id = $1",
+            self.msg_id
+        )
+        .execute(db)
+        .await?;
+        Ok(())
+    }
+    async fn check_violations(db: &PgPool, author: &User, channel: GuildChannel) -> BoxResult<()> {
         // if a message author doesnt exist in the database create one
         let db_author = sqlx::query_as::<_, Members>(
             "SELECT member_id,name,warnings_issued FROM member WHERE member_id = $1",
@@ -55,7 +68,7 @@ impl DbMessage {
 
         if let None = db_author {
             warn!("Message author is not cached!");
-            PgPool::new_user(&db, author).await?;
+            PgPool::new_user(&db, author.clone()).await?;
         }
 
         struct dummychannel {
@@ -83,31 +96,32 @@ impl MessageData for DbMessage {
         msg: serenity::all::Message,
         channel: GuildChannel,
     ) -> BoxResult<()> {
+        trace!("Inserting new message into db {:?}", &msg);
         let msg_id = msg.id.get() as i64;
         let msg_content = msg.content;
         let msg_time = msg.timestamp.naive_utc().and_utc();
-        let author = i64::from(msg.author.id);
+        let author = msg.author.clone();
         let guild = channel.guild_id;
-
-        DbMessage::check_violations(db, msg.author, channel).await?;
+        DbMessage::check_violations(db, &msg.author, channel).await?;
         let _msg = sqlx::query!(
             "INSERT INTO message(msg_id, content, time, author_id,channel_id) VALUES ($1, $2, $3, $4,$5) ON CONFLICT DO NOTHING;",
             msg_id,
             msg_content,
             msg_time,
-            author,
+            author.id.get() as i64,
             msg.channel_id.get() as i64,
         )
             .execute(db)
             .await?;
-        debug!("Created new message {}", msg_id);
-        debug!("Message insertion result {:?}", _msg);
         Ok(())
     }
-    async fn fetch_message(db: &Pool<Postgres>, msg_id: &MessageId) -> BoxResult<Option<DbMessage>> {
+    async fn fetch_message(
+        db: &Pool<Postgres>,
+        msg_id: &MessageId,
+    ) -> BoxResult<Option<DbMessage>> {
         Ok(
             (sqlx::query_as::<_, DbMessage>("SELECT * FROM message WHERE msg_id = $1;")
-                .bind(msg_id.get()as i64)
+                .bind(msg_id.get() as i64)
                 .fetch_optional(&*db)
                 .await?),
         )

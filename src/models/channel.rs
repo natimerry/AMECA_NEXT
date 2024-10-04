@@ -44,10 +44,12 @@ impl ChannelData for Channel {
     }
 
     async fn get_logging_channel(db: &PgPool, guild_channel: GuildId) -> Option<Channel> {
-        let data = sqlx::query_as::<_, Channel>("SELECT * FROM channel WHERE guild_id = $1 AND logging_channel=true")
-            .bind(guild_channel.get() as i64)
-            .fetch_optional(db)
-            .await;
+        let data = sqlx::query_as::<_, Channel>(
+            "SELECT * FROM channel WHERE guild_id = $1 AND logging_channel=true",
+        )
+        .bind(guild_channel.get() as i64)
+        .fetch_optional(db)
+        .await;
         if let Err(ref e) = data {
             error!("Error getting logging channel: {:?}", e);
             None

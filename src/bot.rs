@@ -1,16 +1,19 @@
 mod automod;
 mod register_bot;
+mod purge;
 
 use crate::bot::automod::log_msg_delete;
-use crate::bot::register_bot::register_logging_channel;
+use crate::bot::register_bot::{deregister_logging, register_logging_channel};
 use crate::models::channel::{Channel, ChannelData};
 use crate::models::guilds::GuildData;
 use crate::models::member::MemberData;
 use crate::models::messasges::{DbMessage, MessageData};
 use crate::{BoxResult, DynError};
+use dashmap::DashMap;
 use poise::builtins::register_globally;
 use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::{GuildInfo, Message, MessageRef};
+use regex::Regex;
 use serenity::all::{ChannelType, MessagePagination, Settings};
 use sqlx::types::chrono::Utc;
 use sqlx::Error::Database;
@@ -18,11 +21,11 @@ use sqlx::{PgPool, Pool, Postgres};
 use static_assertions::assert_impl_all;
 use std::ops::Deref;
 use std::sync::{Arc, Mutex};
-use dashmap::DashMap;
-use regex::Regex;
+use poise::serenity_prelude::FullEvent::Ratelimit;
 use tokio::task::JoinHandle;
 use tracing::log::debug;
 use tracing::{error, info, trace, warn};
+use crate::bot::purge::purge;
 
 #[derive(Clone)]
 pub struct AMECA {
@@ -61,7 +64,7 @@ impl AMECA {
                 if let Err(e) = res {
                     error!("Unable to store message in db: {}", e);
                 }
-                automod::on_msg(new_message.clone(), &data.db,&data).await?;
+                automod::on_msg(new_message.clone(), &data.db, &data).await?;
             }
             serenity::FullEvent::Ready { .. } => {
                 info!("Bot is ready to start!");
@@ -71,12 +74,8 @@ impl AMECA {
                 info!("Bot is ready!");
             }
             serenity::FullEvent::GuildCreate { guild, is_new } => {
-                // bot has been added to a new guild... just generate new guild id for now
-                if is_new.is_some() {
-                    info!("New guild: {}", guild.name);
-                } else {
-                    info!("Bot received existing guild data for: {}", guild.name);
-                }
+                debug!("Bot received guild data for: {}", guild.name);
+
                 let time = guild.joined_at.naive_utc().and_utc();
                 PgPool::joined_guild(
                     &data.db,
@@ -85,7 +84,7 @@ impl AMECA {
                     &*guild.name,
                     time,
                 )
-                .await?;
+                    .await?;
             }
             serenity::FullEvent::ChannelCreate { channel } => {
                 info!(
@@ -110,6 +109,7 @@ impl AMECA {
                             let msg =
                                 DbMessage::new_message(&data.db, msg.clone(), channel.clone())
                                     .await;
+
                             if let Err(e) = msg {
                                 error!("Unable to store message in db: {}", e);
                             }
@@ -128,10 +128,12 @@ impl AMECA {
                 guild_id,
             } => {
                 debug!(
-                    "Channel {} deleted message {}",
+                    "Message deleted in channel `{}:{:?} deleted message '{}'",
                     channel_id.name(&ctx).await?,
+                    channel_id,
                     deleted_message_id.get()
                 );
+
                 let x = DbMessage::fetch_message(&data.db, deleted_message_id).await;
                 let guild_id = guild_id.unwrap();
 
@@ -139,16 +141,17 @@ impl AMECA {
                     Err(e) => {
                         error!("Unable to fetch message in db: {}", e);
                     }
-                    Ok(Some(msg)) => {
-                        let log_channel = Channel::get_logging_channel(&data.db,guild_id).await;
+                    Ok(Some(mut msg)) => {
+                        msg.mark_deleted(&data.db).await?;
+                        let log_channel = Channel::get_logging_channel(&data.db, guild_id).await;
                         if let Some(log_channel) = log_channel {
-                            let channel_obj = serenity::ChannelId::from(log_channel.channel_id as u64) ;
+                            let channel_obj =
+                                serenity::ChannelId::from(log_channel.channel_id as u64);
                             log_msg_delete(msg, channel_obj, &ctx).await?;
                             // mark msg in db as deleted !!!
-                        }
-                        else {
+                        } else {
                             warn!("No logging channel found! Adding deletion to the log");
-                            debug!("Message {:#?} was deleted at {}",msg, Utc::now());
+                            debug!("Message {:#?} was deleted at {}", msg, Utc::now());
                         }
                     }
                     Ok(None) => {
@@ -156,6 +159,11 @@ impl AMECA {
                     }
                 }
             }
+            Ratelimit {
+                data,
+            } => {
+                warn!("We are being ratelimited for {} seconds",data.timeout.as_secs());
+            },
             &_ => (),
         }
         Ok(())
@@ -175,7 +183,7 @@ impl AMECA {
             &*guild.name,
             Utc::now(),
         )
-        .await?;
+            .await?;
 
         // cache channels and members next
         for member in guild_members {
@@ -250,7 +258,7 @@ impl AMECA {
 
         let framework = poise::Framework::builder()
             .options(poise::FrameworkOptions {
-                commands: vec![register_logging_channel()],
+                commands: vec![register_logging_channel(), deregister_logging(),purge()],
                 event_handler: |ctx, event, framework, data| {
                     Box::pin(AMECA::event_handler(ctx, event, framework, data))
                 },
@@ -262,9 +270,13 @@ impl AMECA {
             })
             .setup(move |ctx, _ready, _framework| {
                 Box::pin(async move {
-                    let x:DashMap<i32,Regex> = DashMap::new();
+                    let x: DashMap<i32, Regex> = DashMap::new();
                     register_globally(ctx, &_framework.options().commands).await?;
-                    Ok(AMECA { db, cache, cached_regex: x })
+                    Ok(AMECA {
+                        db,
+                        cache,
+                        cached_regex: x,
+                    })
                 })
             })
             .build();

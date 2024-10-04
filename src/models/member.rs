@@ -1,6 +1,6 @@
 use crate::BoxResult;
-use poise::serenity_prelude::GuildId;
 use poise::serenity_prelude as serenity;
+use poise::serenity_prelude::GuildId;
 use serenity::all::User;
 use sqlx::types::chrono::{DateTime, Utc};
 use sqlx::{FromRow, PgPool};
@@ -16,10 +16,7 @@ pub struct Members {
 }
 
 pub trait MemberData {
-    fn new_user(
-        db: &PgPool,
-        user: User,
-    ) -> impl Future<Output = BoxResult<()>> + Send;
+    fn new_user(db: &PgPool, user: User) -> impl Future<Output = BoxResult<()>> + Send;
 
     fn mark_user_in_guild(
         db: &PgPool,
@@ -52,15 +49,14 @@ impl MemberData for PgPool {
     }
     async fn new_user(db: &PgPool, user: User) -> BoxResult<()> {
         let user_id = user.id.get() as i64;
-        let name = user.name;
-        info!("Inserting new user {} into database", &name);
+        let name = &user.name;
+        debug!("Inserting new user {:?} into database", &user);
         let _user = sqlx::query!(
             "INSERT INTO member(member_id,name,warnings_issued) VALUES($1,$2,$3) ON CONFLICT DO NOTHING;",
             user_id,
             name,
             0
         ).execute(db).await?;
-        trace!("User insertion query result: {:?}", _user);
         Ok(())
     }
 }

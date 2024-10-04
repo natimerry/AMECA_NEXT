@@ -53,12 +53,13 @@ pub async fn log_msg_delete(
     ctx: &Context,
 ) -> BoxResult<()> {
     let embed = CreateEmbed::new()
-        .title(format!("Message by <@{}>", msg.author_id))
+        .title("Deleted Message")
         .description(format!(
-            "Content: {}\nTime:{}\nChannel:<#{}>",
+            "Content: {}\nTime:{}\nChannel:<#{}>\nAuthor:<@{}>",
             msg.content,
             msg.time.to_string(),
-            msg.channel_id
+            msg.channel_id,
+            msg.author_id
         ))
         .color(Color::from_rgb(255, 0, 0))
         .footer(CreateEmbedFooter::new(
@@ -72,7 +73,10 @@ pub async fn log_msg_delete(
 }
 pub async fn on_msg(msg: Message, db: &PgPool, data: &AMECA) -> BoxResult<()> {
     if analyse_word(db, msg.clone(), data).await? {
-        info!("Banned word in guild: {:?}", msg.guild_id);
+        info!(
+            "Removing banned word in sentence {} by {}: {:?}",
+            msg.content, msg.author.name, msg.guild_id
+        );
     }
     Ok(())
 }

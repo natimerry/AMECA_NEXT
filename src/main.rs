@@ -1,5 +1,9 @@
+extern crate core;
+
+use std::cell::UnsafeCell;
 use crate::bot::AMECA;
 use sqlx::{Pool, Postgres};
+use std::sync::atomic::{AtomicBool, AtomicU8};
 use tracing::level_filters::LevelFilter;
 use tracing::{debug, info, Level};
 use tracing_subscriber::fmt::writer::MakeWriterExt;
