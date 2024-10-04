@@ -18,8 +18,8 @@ pub struct Members {
 pub trait MemberData {
     fn new_user(
         db: &PgPool,
-        user: serenity::all::User,
-    ) -> impl std::future::Future<Output = BoxResult<()>> + Send;
+        user: User,
+    ) -> impl Future<Output = BoxResult<()>> + Send;
 
     fn mark_user_in_guild(
         db: &PgPool,
