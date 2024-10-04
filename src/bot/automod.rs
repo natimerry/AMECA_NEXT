@@ -71,12 +71,17 @@ pub async fn log_msg_delete(
     let _ = guild_channel.send_message(&ctx.http, msg).await?;
     Ok(())
 }
-pub async fn on_msg(msg: Message, db: &PgPool, data: &AMECA) -> BoxResult<()> {
+pub async fn on_msg(msg: Message, db: &PgPool, data: &AMECA,ctx: &Context) -> BoxResult<()> {
+    if msg.author.id.get() == 972062796609097749{
+        return Ok(())
+    }
     if analyse_word(db, msg.clone(), data).await? {
         info!(
             "Removing banned word in sentence {} by {}: {:?}",
             msg.content, msg.author.name, msg.guild_id
         );
     }
+    msg.delete(&ctx.http).await?;
+    msg.channel_id.say(&ctx.http, "Message removed because of violation!").await?;
     Ok(())
 }

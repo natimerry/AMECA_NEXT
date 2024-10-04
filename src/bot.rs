@@ -64,7 +64,7 @@ impl AMECA {
                 if let Err(e) = res {
                     error!("Unable to store message in db: {}", e);
                 }
-                automod::on_msg(new_message.clone(), &data.db, &data).await?;
+                automod::on_msg(new_message.clone(), &data.db, &data,&ctx).await?;
             }
             serenity::FullEvent::Ready { .. } => {
                 info!("Bot is ready to start!");
