@@ -1,16 +1,13 @@
 use crate::bot::AMECA;
 use crate::models::messasges::DbMessage;
 use crate::BoxResult;
-use log::debug;
-use poise::futures_util::SinkExt;
 use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::{
-    ChannelId, Color, Context, CreateEmbed, CreateEmbedFooter, CreateMessage, GuildChannel,
+    ChannelId, Color, Context, CreateEmbed, CreateEmbedFooter, CreateMessage,
 };
 use regex::Regex;
 use serenity::all::Message;
-use sqlx::types::chrono::{DateTime, Local};
-use sqlx::{FromRow, PgPool, Pool, Postgres};
+use sqlx::{FromRow, PgPool};
 use tracing::{info, trace};
 
 #[derive(FromRow, Debug)]

@@ -6,7 +6,6 @@ use sqlx::types::chrono::{DateTime, Utc};
 use sqlx::{FromRow, PgPool};
 use std::future::Future;
 use tracing::debug;
-use tracing::log::{info, trace};
 
 #[derive(Debug, FromRow)]
 pub struct Members {

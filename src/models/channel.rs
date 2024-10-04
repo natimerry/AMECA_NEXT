@@ -1,10 +1,9 @@
 use crate::BoxResult;
 use log::error;
 use poise::serenity_prelude as serenity;
-use poise::serenity_prelude::{ChannelId, GuildId};
+use poise::serenity_prelude::GuildId;
 use serenity::all::GuildChannel;
 use sqlx::{FromRow, PgPool, Pool, Postgres};
-use std::future::Future;
 use tracing::{debug, trace};
 
 #[derive(Debug, FromRow)]

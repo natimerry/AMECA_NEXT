@@ -7,8 +7,7 @@ use poise::serenity_prelude::MessageId;
 use serenity::all::{GuildChannel, User};
 use sqlx::types::chrono::{DateTime, Utc};
 use sqlx::{FromRow, PgPool, Pool, Postgres};
-use std::fmt::Write;
-use tracing::{debug, warn};
+use tracing::warn;
 
 #[derive(FromRow, Clone, Debug, Default)]
 pub struct DbMessage {
@@ -120,10 +119,10 @@ impl MessageData for DbMessage {
         msg_id: &MessageId,
     ) -> BoxResult<Option<DbMessage>> {
         Ok(
-            (sqlx::query_as::<_, DbMessage>("SELECT * FROM message WHERE msg_id = $1;")
+            sqlx::query_as::<_, DbMessage>("SELECT * FROM message WHERE msg_id = $1;")
                 .bind(msg_id.get() as i64)
                 .fetch_optional(&*db)
-                .await?),
+                .await?,
         )
     }
 }

@@ -15,7 +15,7 @@ pub async fn purge<'a>(
     number_to_purge: u32,
 ) -> BoxResult<()> {
     // get last x msg
-    let mut last_msg = ctx.say("Purging channel!!").await?.message().await?.id;
+    let last_msg = ctx.say("Purging channel!!").await?.message().await?.id;
     let channel = ctx
         .http()
         .get_channel(ctx.channel_id())

@@ -1,6 +1,5 @@
 use crate::bot::AMECA;
 use crate::models::channel::Channel;
-use crate::models::member::Members;
 use crate::{BoxResult, DynError};
 use poise::command;
 use poise::futures_util::{Stream, StreamExt};
@@ -114,7 +113,7 @@ pub async fn register_logging_channel(
         channel,
         ctx.guild_id().expect("Cannot get guild ID")
     );
-    let mut conn = &ctx.data().db.acquire().await?;
+    let conn = &ctx.data().db.acquire().await?;
     let x = sqlx::query!(
         "UPDATE channel SET logging_channel = $1 WHERE guild_id = $2 AND channel_id = $3",
         true,
