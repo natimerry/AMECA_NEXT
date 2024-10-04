@@ -39,9 +39,19 @@ impl AMECA {
     ) -> BoxResult<()> {
         match event {
             serenity::FullEvent::Message { new_message } => {
+                let mut to_print = String::new();
+                let msg = new_message.clone();
+                if &new_message.embeds.len() > &0 {
+                    to_print = (&new_message).embeds.iter().map(|m| {
+                        format!("EMBED({:?})", m)
+                    }).collect::<Vec<String>>().join("\n");
+                }
+                else{
+                    to_print = msg.content;
+                }
                 info!(
-                    "New message: {} <{}>:{}",
-                    new_message.author.name, new_message.id, new_message.content
+                    "New message: {}: {} in {:?}:{:?}",
+                    new_message.author.name, to_print,new_message.guild_id,new_message.channel_id
                 );
                 let channel = new_message.channel(&ctx.http).await?;
                 let res =
