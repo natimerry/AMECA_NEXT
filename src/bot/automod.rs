@@ -12,7 +12,7 @@ struct Banned {
 }
 pub async fn analyse_word(db: &PgPool, msg: String) -> BoxResult<bool> {
     let list_of_banned_words: Vec<Banned> =
-        sqlx::query_as("SELECT id,name,pattern,author FROM banned_words")
+        sqlx::query_as("SELECT id,name,pattern,author FROM prohibited_words_for_guild")
             .fetch_all(db)
             .await?;
     trace!("{:?}", list_of_banned_words);
