@@ -1,9 +1,10 @@
-use std::future::Future;
-use log::error;
 use crate::BoxResult;
+use log::error;
 use poise::serenity_prelude as serenity;
+use poise::serenity_prelude::{ChannelId, GuildId};
 use serenity::all::GuildChannel;
 use sqlx::{FromRow, PgPool, Pool, Postgres};
+use std::future::Future;
 use tracing::{debug, trace};
 
 #[derive(Debug, FromRow)]
@@ -20,9 +21,12 @@ pub trait ChannelData {
     fn new_channel(
         db: &Pool<Postgres>,
         channel: &GuildChannel,
-    ) -> impl std::future::Future<Output=BoxResult<()>> + Send;
+    ) -> impl std::future::Future<Output = BoxResult<()>> + Send;
 
-    fn get_logging_channel(db: &PgPool) -> impl std::future::Future<Output=Option<Channel>> + Send;
+    fn get_logging_channel(
+        db: &PgPool,
+        guild_channel: GuildId,
+    ) -> impl std::future::Future<Output = Option<Channel>> + Send;
 }
 
 impl ChannelData for Channel {
@@ -39,13 +43,15 @@ impl ChannelData for Channel {
         Ok(())
     }
 
-    async fn get_logging_channel(db: &PgPool) -> Option<Channel> {
-        let data = sqlx::query_as::<_, Channel>("SELECT * FROM channels WHERE channel_id = $1 AND guild_id = $2").fetch_optional(db).await;
-        return if let Err(ref e) = data {
+    async fn get_logging_channel(db: &PgPool, guild_channel: GuildId) -> Option<Channel> {
+        let data = sqlx::query_as::<_, Channel>("SELECT * FROM channel WHERE guild_id = $1 AND logging_channel=true")
+            .bind(guild_channel.get() as i64)
+            .fetch_optional(db)
+            .await;
+        if let Err(ref e) = data {
             error!("Error getting logging channel: {:?}", e);
             None
-        }
-        else{
+        } else {
             data.unwrap()
         }
     }

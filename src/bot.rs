@@ -123,12 +123,14 @@ impl AMECA {
                     deleted_message_id.get()
                 );
                 let x = DbMessage::fetch_message(&data.db, deleted_message_id).await;
+                let guild_id = guild_id.unwrap();
+
                 match x {
                     Err(e) => {
                         error!("Unable to fetch message in db: {}", e);
                     }
                     Ok(Some(msg)) => {
-                        let log_channel = Channel::get_logging_channel(&data.db).await;
+                        let log_channel = Channel::get_logging_channel(&data.db,guild_id).await;
                         if let Some(log_channel) = log_channel {
                             let channel_obj = serenity::ChannelId::from(log_channel.channel_id as u64) ;
                             log_msg_delete(msg, channel_obj, &ctx).await?;
