@@ -10,8 +10,8 @@ pub struct Channel {
     pub muted: bool,
     pub logging_channel: bool,
     pub channel_name: String,
-    #[sqlx(rename = "guild_id")]
-    pub parent_guild_id: Option<i64>,
+    pub automod_exempt: bool,
+    pub guild_id: Option<i64>,
 }
 
 pub trait ChannelData {
