@@ -12,6 +12,7 @@ mod models;
 
 type DynError = Box<dyn std::error::Error + Send + Sync>;
 type BoxResult<T> = Result<T, DynError>;
+type Context<'a> = poise::Context<'a, AMECA, DynError>;
 
 #[derive(Debug)]
 struct Args {

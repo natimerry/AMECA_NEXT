@@ -1,6 +1,5 @@
 mod automod;
-mod register_to_tc;
-
+mod register_bot;
 use crate::models::channel::ChannelData;
 use crate::models::guilds::GuildData;
 use crate::models::member::MemberData;
@@ -14,6 +13,8 @@ use sqlx::{PgPool, Pool, Postgres};
 use tokio::task::JoinHandle;
 use tracing::log::debug;
 use tracing::{error, info, trace};
+use crate::bot::register_bot::register_logging_channel;
+
 #[derive(Clone)]
 pub struct AMECA {
     db: Pool<Postgres>,
@@ -145,18 +146,24 @@ impl AMECA {
         settings.max_messages = 10000;
 
         let framework = poise::Framework::builder()
+            .options(poise::FrameworkOptions {
+                commands: vec![
+                    register_logging_channel()
+                ],
+                event_handler: |ctx, event, framework, data| {
+                    Box::pin(AMECA::event_handler(ctx, event, framework, data))
+                },
+                prefix_options: poise::PrefixFrameworkOptions {
+                    prefix: Some("~".into()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            })
             .setup(move |ctx, _ready, _framework| {
                 Box::pin(async move {
                     register_globally(ctx, &_framework.options().commands).await?;
                     Ok(AMECA { db, cache })
                 })
-            })
-            .options(poise::FrameworkOptions {
-                commands: vec![],
-                event_handler: |ctx, event, framework, data| {
-                    Box::pin(AMECA::event_handler(ctx, event, framework, data))
-                },
-                ..Default::default()
             })
             .build();
         let intents = serenity::GatewayIntents::AUTO_MODERATION_CONFIGURATION
@@ -164,6 +171,7 @@ impl AMECA {
             | serenity::GatewayIntents::GUILD_MESSAGE_REACTIONS
             | serenity::GatewayIntents::AUTO_MODERATION_EXECUTION
             | serenity::GatewayIntents::GUILDS
+            | serenity::GatewayIntents::GUILD_MEMBERS
             | serenity::GatewayIntents::privileged();
 
         let client = serenity::ClientBuilder::new(token, intents)
