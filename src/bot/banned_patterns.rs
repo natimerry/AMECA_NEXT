@@ -47,7 +47,8 @@ async fn autocomplete_pattern<'a>(
 #[poise::command(
     slash_command,
     guild_only = true,
-    required_permissions = "MANAGE_MESSAGES"
+    required_permissions = "MANAGE_MESSAGES",
+    required_bot_permissions = "MANAGE_MESSAGES"
 )]
 pub async fn remove_banned_pattern(
     ctx: Context<'_>,
@@ -82,7 +83,8 @@ pub async fn remove_banned_pattern(
 #[poise::command(
     slash_command,
     guild_only = true,
-    required_permissions = "MANAGE_MESSAGES"
+    required_permissions = "MANAGE_MESSAGES",
+    required_bot_permissions = "MANAGE_MESSAGES"
 )]
 pub async fn ban_pattern(
     ctx: Context<'_>,

@@ -4,6 +4,7 @@ use poise::serenity_prelude::{CacheHttp, MessagePagination};
 #[poise::command(
     slash_command,
     required_permissions = "MANAGE_MESSAGES",
+    required_bot_permissions = "MANAGE_MESSAGES",
     guild_only = "true"
 )]
 pub async fn purge<'a>(

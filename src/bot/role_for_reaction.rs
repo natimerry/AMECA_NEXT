@@ -77,7 +77,9 @@ pub async fn stop_watching_for_reactions(
 #[poise::command(
     slash_command,
     guild_only = "true",
-    required_permissions = "MANAGE_ROLES"
+    required_permissions = "MANAGE_ROLES",
+    required_bot_permissions = "MANAGE_ROLES"
+
 )]
 pub async fn set_role_assignment(
     ctx: Context<'_>,
