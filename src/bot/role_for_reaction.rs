@@ -11,6 +11,7 @@ use poise::serenity_prelude::{
 };
 
 use std::str::FromStr;
+use log::warn;
 use tracing::info;
 
 async fn autocomplete_emojis<'a>(
@@ -98,10 +99,11 @@ pub async fn set_role_assignment(
         .await
     {
         Ok(_) => {}
-        Err(_) => {
+        Err(e) => {
             ctx.say("Invalid emoji provided! Use a emoji in the guild or a default emoji please!")
                 .await?;
-            return Ok(());
+            error!("{}",e);
+            warn!("Continuing with procedure since bot may still work?");
         }
     }
 
