@@ -39,15 +39,3 @@ impl GuildData for Pool<Postgres> {
         Ok(())
     }
 }
-
-mod tests {
-    
-    
-    
-    
-    
-    
-    
-
-
-}

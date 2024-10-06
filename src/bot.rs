@@ -1,33 +1,41 @@
 mod automod;
-mod register_bot;
+mod banned_patterns;
 mod purge;
+mod register_bot;
+mod role_for_reaction;
 
-use crate::bot::automod::log_msg_delete;
+use crate::bot::automod::{cache_roles, log_msg_delete};
+use crate::bot::banned_patterns::{ban_pattern, remove_banned_pattern};
+use crate::bot::purge::purge;
 use crate::bot::register_bot::{deregister_logging, register_logging_channel};
+use crate::bot::role_for_reaction::{set_role_assignment, stop_watching_for_reactions};
 use crate::models::channel::{Channel, ChannelData};
 use crate::models::guilds::GuildData;
 use crate::models::member::MemberData;
 use crate::models::messasges::{DbMessage, MessageData};
+use crate::models::role::Role;
 use crate::{BoxResult, DynError};
 use dashmap::DashMap;
 use poise::builtins::register_globally;
 use poise::serenity_prelude as serenity;
-use poise::serenity_prelude::GuildInfo;
+use poise::serenity_prelude::FullEvent::Ratelimit;
+use poise::serenity_prelude::{GuildInfo, Message, RoleId, User, UserId};
 use regex::Regex;
 use serenity::all::{ChannelType, MessagePagination, Settings};
 use sqlx::types::chrono::Utc;
 use sqlx::{PgPool, Pool, Postgres};
-use poise::serenity_prelude::FullEvent::Ratelimit;
+use std::ops::Deref;
 use tokio::task::JoinHandle;
 use tracing::log::debug;
 use tracing::{error, info, trace, warn};
-use crate::bot::purge::purge;
 
 #[derive(Clone)]
 pub struct AMECA {
-    db: Pool<Postgres>,
+    pub bot: User,
+    pub(crate) db: Pool<Postgres>,
     cache: bool,
-    cached_regex: DashMap<i32, Regex>,
+    cached_regex: DashMap<i64, Vec<Regex>>,
+    pub watch_msgs: DashMap<i64, Vec<Role>>, // Name and guild
 }
 impl AMECA {
     async fn event_handler<'a>(
@@ -41,16 +49,22 @@ impl AMECA {
                 let mut to_print = String::new();
                 let msg = new_message.clone();
                 if &new_message.embeds.len() > &0 {
-                    to_print = (&new_message).embeds.iter().map(|m| {
-                        format!("EMBED({:?})", m)
-                    }).collect::<Vec<String>>().join("\n");
-                }
-                else{
+                    to_print = (&new_message)
+                        .embeds
+                        .iter()
+                        .map(|m| format!("EMBED({:?})", m))
+                        .collect::<Vec<String>>()
+                        .join("\n");
+                } else {
                     to_print = msg.content;
                 }
-                info!(
-                    "New message: {}: {} in {:?}:{:?}",
-                    new_message.author.name, to_print,new_message.guild_id,new_message.channel_id
+
+                trace!(
+                    "New message: {}: {} in {:#?}:{:?}",
+                    new_message.author.name,
+                    to_print,
+                    new_message.guild_id,
+                    new_message.channel_id
                 );
                 let channel = new_message.channel(&ctx.http).await?;
                 let res =
@@ -60,7 +74,7 @@ impl AMECA {
                 if let Err(e) = res {
                     error!("Unable to store message in db: {}", e);
                 }
-                automod::on_msg(new_message.clone(), &data.db, &data,&ctx).await?;
+                automod::on_msg(new_message.clone(), &data.db, &data, &ctx).await?;
             }
             serenity::FullEvent::Ready { .. } => {
                 info!("Bot is ready to start!");
@@ -80,7 +94,7 @@ impl AMECA {
                     &*guild.name,
                     time,
                 )
-                    .await?;
+                .await?;
             }
             serenity::FullEvent::ChannelCreate { channel } => {
                 info!(
@@ -110,7 +124,6 @@ impl AMECA {
                                 error!("Unable to store message in db: {}", e);
                             }
                         }
-                        debug!("Finished caching messages");
                     }
                     None => {
                         warn!("No messages received for deleted channel!");
@@ -139,27 +152,72 @@ impl AMECA {
                     }
                     Ok(Some(mut msg)) => {
                         msg.mark_deleted(&data.db).await?;
-                        let log_channel = Channel::get_logging_channel(&data.db, guild_id).await;
-                        if let Some(log_channel) = log_channel {
-                            let channel_obj =
-                                serenity::ChannelId::from(log_channel.channel_id as u64);
-                            log_msg_delete(msg, channel_obj, &ctx).await?;
-                            // mark msg in db as deleted !!!
-                        } else {
-                            warn!("No logging channel found! Adding deletion to the log");
-                            debug!("Message {:#?} was deleted at {}", msg, Utc::now());
-                        }
+                        log_msg_delete(msg, guild_id, &ctx, data).await?;
                     }
                     Ok(None) => {
                         warn!("Deleted message unavailable in the database");
                     }
                 }
             }
-            Ratelimit {
-                data,
-            } => {
-                warn!("We are being ratelimited for {} seconds",data.timeout.as_secs());
-            },
+            Ratelimit { data } => {
+                warn!(
+                    "We are being ratelimited for {} seconds",
+                    data.timeout.as_secs()
+                );
+            }
+            serenity::FullEvent::ReactionAdd { add_reaction } => {
+                if data.watch_msgs.is_empty() {
+                    info!("Caching role reactions I have to react to!");
+                    cache_roles(&data).await?;
+                }
+                trace!("{:#?}", add_reaction);
+                let guild = add_reaction.guild_id;
+                if let None = guild {
+                    debug!(
+                        "Reaction {} is not in an guild",
+                        add_reaction.channel_id.name(&ctx).await?
+                    );
+                    return Ok(());
+                }
+                if add_reaction.message_author_id
+                    == Some(UserId::new(
+                        std::env::var("BOT_USER").unwrap().parse::<u64>().unwrap(),
+                    ))
+                {
+                    return Ok(());
+                }
+                let guild = guild.unwrap().get() as i64;
+                let guild_watchlist = data.watch_msgs.get(&guild);
+                if let Some(guild_watchlist) = guild_watchlist {
+                    // if it actually exists
+                    let guild_watchlist = guild_watchlist.deref();
+                    for role_for_reaction in guild_watchlist {
+                        if add_reaction.emoji.to_string() == role_for_reaction.emoji.to_string() {
+                            info!(
+                                "Updating roles for {} for reacting to watched msg!",
+                                &add_reaction.message_author_id.unwrap()
+                            );
+                            let x = ctx.http
+                                .add_member_role(
+                                    add_reaction.guild_id.unwrap(),
+                                    add_reaction.message_author_id.unwrap(),
+                                    RoleId::new(role_for_reaction.roles_id as u64),
+                                    Some(&format!(
+                                        "Assigning role for reaction to message. (WatchID: {})",
+                                        role_for_reaction.roles_id
+                                    )),
+                                )
+                                .await;
+                            match x{
+                                Ok(_) => {}
+                                Err(e) => {
+                                    info!("Error assigning roles {:#?}",e);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             &_ => (),
         }
         Ok(())
@@ -179,7 +237,7 @@ impl AMECA {
             &*guild.name,
             Utc::now(),
         )
-            .await?;
+        .await?;
 
         // cache channels and members next
         for member in guild_members {
@@ -254,7 +312,15 @@ impl AMECA {
 
         let framework = poise::Framework::builder()
             .options(poise::FrameworkOptions {
-                commands: vec![register_logging_channel(), deregister_logging(),purge()],
+                commands: vec![
+                    register_logging_channel(),
+                    deregister_logging(),
+                    purge(),
+                    ban_pattern(),
+                    remove_banned_pattern(),
+                    set_role_assignment(),
+                    stop_watching_for_reactions(),
+                ],
                 event_handler: |ctx, event, framework, data| {
                     Box::pin(AMECA::event_handler(ctx, event, framework, data))
                 },
@@ -266,12 +332,19 @@ impl AMECA {
             })
             .setup(move |ctx, _ready, _framework| {
                 Box::pin(async move {
-                    let x: DashMap<i32, Regex> = DashMap::new();
+                    let x: DashMap<i64, Vec<Regex>> = DashMap::new();
                     register_globally(ctx, &_framework.options().commands).await?;
                     Ok(AMECA {
+                        bot: ctx
+                            .http
+                            .get_user(UserId::from(
+                                std::env::var("BOT_USER").unwrap().parse::<u64>().unwrap(),
+                            ))
+                            .await?,
                         db,
                         cache,
                         cached_regex: x,
+                        watch_msgs: DashMap::new(),
                     })
                 })
             })

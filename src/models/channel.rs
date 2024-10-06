@@ -1,7 +1,7 @@
 use crate::BoxResult;
-use log::error;
+use log::{error, warn};
 use poise::serenity_prelude as serenity;
-use poise::serenity_prelude::GuildId;
+use poise::serenity_prelude::{CacheHttp, CreateEmbed, CreateMessage, Embed, GuildId};
 use serenity::all::GuildChannel;
 use sqlx::{FromRow, PgPool, Pool, Postgres};
 use tracing::{debug, trace};
@@ -21,6 +21,12 @@ pub trait ChannelData {
         db: &Pool<Postgres>,
         channel: &GuildChannel,
     ) -> impl std::future::Future<Output = BoxResult<()>> + Send;
+    async fn send_to_logging_channel(
+        embed: CreateEmbed,
+        ctx: impl CacheHttp,
+        db: &Pool<Postgres>,
+        guild_id: GuildId,
+    ) -> BoxResult<()>;
 
     fn get_logging_channel(
         db: &PgPool,
@@ -41,7 +47,23 @@ impl ChannelData for Channel {
 
         Ok(())
     }
-
+    async fn send_to_logging_channel(
+        embed: CreateEmbed,
+        ctx: impl CacheHttp,
+        db: &Pool<Postgres>,
+        guild_id: GuildId,
+    ) -> BoxResult<()>{
+        let log_channel = Channel::get_logging_channel(&db, guild_id).await;
+        if let Some(log_channel) = log_channel {
+            let channel_obj = serenity::ChannelId::from(log_channel.channel_id as u64);
+            let msg_builder = CreateMessage::new().embed(embed);
+            channel_obj.send_message(&ctx,msg_builder).await?;
+            // mark msg in db as deleted !!!
+        } else {
+            warn!("No logging channel found! Adding deletion to the log");
+        }
+        Ok(())
+    }
     async fn get_logging_channel(db: &PgPool, guild_channel: GuildId) -> Option<Channel> {
         let data = sqlx::query_as::<_, Channel>(
             "SELECT * FROM channel WHERE guild_id = $1 AND logging_channel=true",

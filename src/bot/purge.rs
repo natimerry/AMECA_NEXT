@@ -1,7 +1,6 @@
 use crate::{BoxResult, Context};
 use poise::serenity_prelude::{CacheHttp, MessagePagination};
 
-
 #[poise::command(
     slash_command,
     required_permissions = "MANAGE_MESSAGES",
@@ -27,7 +26,7 @@ pub async fn purge<'a>(
         .get_messages(
             channel.id.clone(),
             Some(MessagePagination::Before(last_msg)),
-            Some(number_to_purge  as u8),
+            Some(number_to_purge as u8),
         )
         .await?
         .iter()
