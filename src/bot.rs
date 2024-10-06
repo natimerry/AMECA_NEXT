@@ -195,12 +195,12 @@ impl AMECA {
                         if add_reaction.emoji.to_string() == role_for_reaction.emoji.to_string() {
                             info!(
                                 "Updating roles for {} for reacting to watched msg!",
-                                &add_reaction.message_author_id.unwrap()
+                                &add_reaction.user_id.unwrap()
                             );
                             let x = ctx.http
                                 .add_member_role(
                                     add_reaction.guild_id.unwrap(),
-                                    add_reaction.message_author_id.unwrap(),
+                                    add_reaction.user_id.unwrap(),
                                     RoleId::new(role_for_reaction.roles_id as u64),
                                     Some(&format!(
                                         "Assigning role for reaction to message. (WatchID: {})",
