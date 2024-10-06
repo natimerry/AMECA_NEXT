@@ -1,4 +1,4 @@
-use log::{info, trace};
+use tracing::log::{info, trace};
 use crate::BoxResult;
 use poise::serenity_prelude::{GuildId, MessageId, RoleId};
 use sqlx::FromRow;

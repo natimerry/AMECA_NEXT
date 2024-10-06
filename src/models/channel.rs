@@ -1,5 +1,5 @@
 use crate::BoxResult;
-use log::{error, warn};
+use tracing::log::{error, warn};
 use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::{CacheHttp, CreateEmbed, CreateMessage, GuildId};
 use serenity::all::GuildChannel;

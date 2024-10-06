@@ -1,7 +1,7 @@
 use crate::models::channel::ChannelData;
 use crate::models::member::{MemberData, Members};
 use crate::{models, BoxResult};
-use log::trace;
+use tracing::log::trace;
 use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::MessageId;
 use serenity::all::{GuildChannel, User};

@@ -2,7 +2,7 @@ use crate::bot::automod::cache_roles;
 use crate::models::channel::{Channel, ChannelData};
 use crate::models::role::{Role as DbRole, RoleData};
 use crate::{BoxResult, Context};
-use log::{debug, error, trace};
+use tracing::log::{debug, error, trace};
 use poise::futures_util::Stream;
 use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::{
@@ -11,6 +11,7 @@ use poise::serenity_prelude::{
 };
 
 use std::str::FromStr;
+use tracing::info;
 
 async fn autocomplete_emojis<'a>(
     ctx: Context<'_>,
@@ -49,7 +50,7 @@ pub async fn stop_watching_for_reactions(
     name: String,
 ) -> BoxResult<()> {
     let guild = ctx.guild().expect("Cannot get guild ID").id.get() as i64;
-    log::info!("Removing regex entry `{}` from database ", name);
+    info!("Removing regex entry `{}` from database ", name);
     sqlx::query!(
         "DELETE FROM reaction_role WHERE name = $1 AND guild_id=$2",
         name,

@@ -1,7 +1,7 @@
 use crate::bot::automod::cache_regex;
 use crate::models::channel::{Channel as DbChannel, ChannelData};
 use crate::{BoxResult, Context};
-use log::info;
+use tracing::log::info;
 use poise::futures_util::Stream;
 use poise::serenity_prelude::{
     futures, Color, CreateEmbed, CreateEmbedAuthor, CreateMessage,
