@@ -1,19 +1,14 @@
-use crate::bot::automod::{cache_regex, log_msg_delete};
-use crate::models::channel::{Channel as DbChannel, Channel, ChannelData};
+use crate::bot::automod::cache_regex;
+use crate::models::channel::{Channel as DbChannel, ChannelData};
 use crate::{BoxResult, Context};
-use log::{error, info};
+use log::info;
 use poise::futures_util::Stream;
-use poise::serenity_prelude::RoleAction::Create;
 use poise::serenity_prelude::{
-    futures, CacheHttp, Color, CreateEmbed, CreateEmbedAuthor, CreateMessage,
+    futures, Color, CreateEmbed, CreateEmbedAuthor, CreateMessage,
 };
 use poise::futures_util::StreamExt;
 use regex::Regex;
-use sqlx::Row;
-use std::ops::Deref;
 use tracing::{debug, trace};
-use tracing::field::debug;
-use tracing_subscriber::fmt::format;
 
 async fn autocomplete_pattern<'a>(
     ctx: Context<'_>,
@@ -94,9 +89,8 @@ pub async fn ban_pattern(
     let guild = ctx.guild_id().expect("GuildID not found"); // unreachable error
     let guild = guild.get() as i64;
     let author = ctx.author().id.get() as i64;
-    let mut regex = Regex::new(&pattern);
+    let regex = Regex::new(&pattern);
 
-    let uh = pattern.clone();
     match regex {
         Ok(_re) => {
             ctx.say("Regex compiled! Enforcing pattern starting from now!")
@@ -143,7 +137,7 @@ pub async fn ban_pattern(
                     true,
                 );
             let msg = CreateMessage::new().embed(embed);
-            let channel = ctx.channel_id().send_message(&ctx, msg).await?;
+            ctx.channel_id().send_message(&ctx, msg).await?;
             return Ok(());
         }
     }

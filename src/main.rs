@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 extern crate core;
 
 use crate::bot::AMECA;
@@ -60,10 +61,8 @@ async fn main() {
     let warn_file =
         tracing_appender::rolling::hourly("./logs/", "warnings").with_max_level(Level::WARN);
     let all_files = debug_file.and(warn_file);
-    let console_layer = console_subscriber::spawn();
 
     tracing_subscriber::registry()
-        .with(console_layer)
         .with(
             EnvFilter::builder()
                 .with_default_directive(LevelFilter::TRACE.into())

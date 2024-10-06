@@ -70,11 +70,11 @@ impl DbMessage {
             PgPool::new_user(&db, author.clone()).await?;
         }
 
-        struct dummychannel {
+        struct Dummychannel {
             channel_id: i64,
         }
         let db_channel = sqlx::query_as!(
-            dummychannel,
+            Dummychannel,
             "SELECT channel_id FROM channel WHERE channel_id = $1",
             channel.id.get() as i64
         )
@@ -100,7 +100,6 @@ impl MessageData for DbMessage {
         let msg_content = msg.content;
         let msg_time = msg.timestamp.naive_utc().and_utc();
         let author = msg.author.clone();
-        let guild = channel.guild_id;
         DbMessage::check_violations(db, &msg.author, channel).await?;
         let _msg = sqlx::query!(
             "INSERT INTO message(msg_id, content, time, author_id,channel_id) VALUES ($1, $2, $3, $4,$5) ON CONFLICT DO NOTHING;",

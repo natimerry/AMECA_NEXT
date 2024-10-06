@@ -1,7 +1,7 @@
 use log::{info, trace};
 use crate::BoxResult;
 use poise::serenity_prelude::{GuildId, MessageId, RoleId};
-use sqlx::{FromRow, PgPool, Pool};
+use sqlx::FromRow;
 use crate::bot::AMECA;
 
 #[derive(Debug, Clone, sqlx::FromRow)]

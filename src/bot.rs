@@ -1,3 +1,4 @@
+
 mod automod;
 mod banned_patterns;
 mod purge;
@@ -19,7 +20,7 @@ use dashmap::DashMap;
 use poise::builtins::register_globally;
 use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::FullEvent::Ratelimit;
-use poise::serenity_prelude::{GuildInfo, Message, RoleId, User, UserId};
+use poise::serenity_prelude::{GuildInfo, RoleId, User, UserId};
 use regex::Regex;
 use serenity::all::{ChannelType, MessagePagination, Settings};
 use sqlx::types::chrono::Utc;
@@ -60,9 +61,8 @@ impl AMECA {
                 }
 
                 trace!(
-                    "New message: {}: {} in {:#?}:{:?}",
+                    "New message: {}: {to_print} in {:#?}:{:?}",
                     new_message.author.name,
-                    to_print,
                     new_message.guild_id,
                     new_message.channel_id
                 );
@@ -293,7 +293,6 @@ impl AMECA {
     pub async fn cache_data(ctx: &serenity::Context, data: AMECA) -> BoxResult<()> {
         info!("Starting caching of data");
         let ctx = ctx.clone();
-        let data_binding = &data;
         let thread: JoinHandle<BoxResult<()>> = tokio::spawn(async move {
             let guilds = ctx.http.get_guilds(None, None).await?;
             trace!("Received data {:?}", &guilds);

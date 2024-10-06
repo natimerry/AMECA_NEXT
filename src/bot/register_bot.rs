@@ -113,7 +113,6 @@ pub async fn register_logging_channel(
         channel,
         ctx.guild_id().expect("Cannot get guild ID")
     );
-    let conn = &ctx.data().db.acquire().await?;
     let x = sqlx::query!(
         "UPDATE channel SET logging_channel = $1 WHERE guild_id = $2 AND channel_id = $3",
         true,

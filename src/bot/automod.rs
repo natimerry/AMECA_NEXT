@@ -3,7 +3,7 @@ use crate::models::messasges::DbMessage;
 use crate::BoxResult;
 use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::{
-    ChannelId, Color, Context, CreateEmbed, CreateEmbedFooter, CreateMessage, GuildId,
+    Color, Context, CreateEmbed, CreateEmbedFooter, GuildId,
 };
 use regex::Regex;
 use serenity::all::Message;

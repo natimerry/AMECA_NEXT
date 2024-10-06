@@ -1,7 +1,7 @@
 use crate::BoxResult;
 use log::{error, warn};
 use poise::serenity_prelude as serenity;
-use poise::serenity_prelude::{CacheHttp, CreateEmbed, CreateMessage, Embed, GuildId};
+use poise::serenity_prelude::{CacheHttp, CreateEmbed, CreateMessage, GuildId};
 use serenity::all::GuildChannel;
 use sqlx::{FromRow, PgPool, Pool, Postgres};
 use tracing::{debug, trace};

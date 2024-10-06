@@ -1,19 +1,16 @@
-use crate::bot::automod::{cache_regex, cache_roles};
+use crate::bot::automod::cache_roles;
 use crate::models::channel::{Channel, ChannelData};
 use crate::models::role::{Role as DbRole, RoleData};
-use crate::{BoxResult, Context, DynError};
+use crate::{BoxResult, Context};
 use log::{debug, error, trace};
 use poise::futures_util::Stream;
 use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::{
-    content_safe, futures, CacheHttp, Color, CreateEmbed, CreateEmbedAuthor, Emoji, ReactionType,
+    futures, Color, CreateEmbed, CreateEmbedAuthor, ReactionType,
     Role,
 };
 
-use sqlx::error::DatabaseError;
-use sqlx::Error as SqlxError;
 use std::str::FromStr;
-use tracing::info;
 
 async fn autocomplete_emojis<'a>(
     ctx: Context<'_>,
@@ -41,7 +38,9 @@ async fn autocomplete_emojis<'a>(
 #[poise::command(
     slash_command,
     guild_only = true,
-    required_permissions = "MANAGE_ROLES"
+    required_permissions = "MANAGE_ROLES",
+    required_bot_permissions = "MANAGE_ROLES",
+    ephemeral = "true",
 )]
 pub async fn stop_watching_for_reactions(
     ctx: Context<'_>,
@@ -127,7 +126,7 @@ pub async fn set_role_assignment(
         }
         Err(e) => {
             error!("Error in setting role-msg relation {e:#?}");
-            ctx.say(("Error in setting role-msg relation. Check logs for more detail"))
+            ctx.say("Error in setting role-msg relation. Check logs for more detail")
                 .await?;
             let embed = CreateEmbed::new()
                 .author(CreateEmbedAuthor::new("AMECA_NEXT").url("https://github.com/AMECA_NEXT"))
