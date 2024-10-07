@@ -72,7 +72,7 @@ pub async fn analyse_word(db: &PgPool, msg: Message, data: &AMECA) -> BoxResult<
             let vec = vec.deref().clone();
             let mut flag = false;
             for x in vec {
-                if dbg!(x).is_match(&msg.content) {
+                if (x).is_match(&msg.content) {
                     flag = true;
                     break;
                 }
