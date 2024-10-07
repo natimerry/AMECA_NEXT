@@ -49,14 +49,19 @@ impl AMECA {
         let span = span!(Level::TRACE, "AMECA", "shard" = ctx.shard_id.to_string());
         let _enter = span.enter();
         match event {
-            serenity::FullEvent::GuildMemberAddition {
-                new_member
-            } => {
+            serenity::FullEvent::GuildMemberAddition { new_member } => {
                 let new_member = new_member.user.clone();
                 PgPool::new_user(&data.db, new_member).await?;
             }
 
             serenity::FullEvent::Message { new_message } => {
+                if let None = new_message.guild_id {
+                    debug!(
+                        "BOT DM: {} (Message is not sent in a guild!)",
+                        new_message.content
+                    );
+                    return Ok(());
+                }
                 let mut to_print = String::new();
                 let msg = new_message.clone();
                 if &new_message.embeds.len() > &0 {
@@ -69,13 +74,17 @@ impl AMECA {
                 } else {
                     to_print = msg.content;
                 }
+                let guild_id = new_message.guild_id.unwrap().to_string();
 
-                info!(new_message.guild_id,
-                    "New message: {}: {to_print} in {:#?}:{:?}",
+                info!(
+                    guild_id,
+                    "New message: {} {} in {:?}:{:?}",
+                    to_print,
                     new_message.author.name,
                     new_message.guild_id,
                     new_message.channel_id,
                 );
+
                 let channel = new_message.channel(&ctx.http).await?;
                 let res =
                     DbMessage::new_message(&data.db, new_message.clone(), channel.guild().unwrap())
@@ -93,10 +102,8 @@ impl AMECA {
                 }
                 info!("Bot is ready!");
             }
-            serenity::FullEvent::GuildDelete {
-                incomplete, full
-            } => {
-                info!("Bot has left the guild {} ({})",incomplete.id);
+            serenity::FullEvent::GuildDelete { incomplete, full } => {
+                info!("Bot has left the guild {} ", incomplete.id);
             }
             serenity::FullEvent::GuildCreate { guild, is_new } => {
                 debug!("Bot received guild data for: {}", guild.name);
@@ -109,7 +116,7 @@ impl AMECA {
                     &*guild.name,
                     time,
                 )
-                    .await?;
+                .await?;
             }
             serenity::FullEvent::ChannelCreate { channel } => {
                 info!(
@@ -196,8 +203,8 @@ impl AMECA {
                 }
                 if add_reaction.message_author_id
                     == Some(UserId::new(
-                    std::env::var("BOT_USER").unwrap().parse::<u64>().unwrap(),
-                ))
+                        std::env::var("BOT_USER").unwrap().parse::<u64>().unwrap(),
+                    ))
                 {
                     return Ok(());
                 }
@@ -253,7 +260,7 @@ impl AMECA {
             &*guild.name,
             Utc::now(),
         )
-            .await?;
+        .await?;
 
         // cache channels and members next
         for member in guild_members {
@@ -309,7 +316,7 @@ impl AMECA {
     }
 
     pub async fn cache_data(ctx: &serenity::Context, data: AMECA) -> BoxResult<()> {
-        let span = span!(Level::TRACE,"cache", "shard" = ctx.shard_id.to_string());
+        let span = span!(Level::TRACE, "cache", "shard" = ctx.shard_id.to_string());
         let _ = span.enter();
         info!("Starting caching of data");
         let ctx = ctx.clone();
@@ -401,7 +408,6 @@ impl AMECA {
             }
         });
         client.start_shards(args.shards as u32).await?;
-
 
         Ok(())
     }
