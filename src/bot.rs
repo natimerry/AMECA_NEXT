@@ -53,8 +53,8 @@ impl AMECA {
                 new_member
             } => {
                 let new_member = new_member.user.clone();
-                PgPool::new_user(&data.db,new_member).await?;
-            },
+                PgPool::new_user(&data.db, new_member).await?;
+            }
 
             serenity::FullEvent::Message { new_message } => {
                 let mut to_print = String::new();
@@ -70,11 +70,11 @@ impl AMECA {
                     to_print = msg.content;
                 }
 
-                trace!(
+                info!(new_message.guild_id,
                     "New message: {}: {to_print} in {:#?}:{:?}",
                     new_message.author.name,
                     new_message.guild_id,
-                    new_message.channel_id
+                    new_message.channel_id,
                 );
                 let channel = new_message.channel(&ctx.http).await?;
                 let res =
@@ -93,6 +93,11 @@ impl AMECA {
                 }
                 info!("Bot is ready!");
             }
+            serenity::FullEvent::GuildDelete {
+                incomplete, full
+            } => {
+                info!("Bot has left the guild {} ({})",incomplete.id);
+            }
             serenity::FullEvent::GuildCreate { guild, is_new } => {
                 debug!("Bot received guild data for: {}", guild.name);
 
@@ -104,7 +109,7 @@ impl AMECA {
                     &*guild.name,
                     time,
                 )
-                .await?;
+                    .await?;
             }
             serenity::FullEvent::ChannelCreate { channel } => {
                 info!(
@@ -191,8 +196,8 @@ impl AMECA {
                 }
                 if add_reaction.message_author_id
                     == Some(UserId::new(
-                        std::env::var("BOT_USER").unwrap().parse::<u64>().unwrap(),
-                    ))
+                    std::env::var("BOT_USER").unwrap().parse::<u64>().unwrap(),
+                ))
                 {
                     return Ok(());
                 }
@@ -248,7 +253,7 @@ impl AMECA {
             &*guild.name,
             Utc::now(),
         )
-        .await?;
+            .await?;
 
         // cache channels and members next
         for member in guild_members {
@@ -287,7 +292,7 @@ impl AMECA {
                         Some(100),
                     )
                     .await?;
-                let msg = ctx.http.get_message(channel_binding.id,last_msg).await?;
+                let msg = ctx.http.get_message(channel_binding.id, last_msg).await?;
                 msgs.push(msg);
                 for msg in msgs {
                     DbMessage::new_message(&data.db, msg, channel_binding.clone()).await?;
@@ -323,7 +328,6 @@ impl AMECA {
         Ok(())
     }
     pub async fn start_shard(token: String, db: Pool<Postgres>, args: Args) -> BoxResult<()> {
-
         let mut settings = Settings::default();
         settings.max_messages = 0;
 
