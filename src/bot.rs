@@ -19,7 +19,7 @@ use dashmap::DashMap;
 use poise::builtins::register_globally;
 use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::FullEvent::Ratelimit;
-use poise::serenity_prelude::{GuildInfo, RoleId, User, UserId};
+use poise::serenity_prelude::{CacheHttp, GuildInfo, Reaction, RoleId, User, UserId};
 use regex::Regex;
 use serenity::all::{ChannelType, MessagePagination, Settings};
 use sqlx::types::chrono::Utc;
@@ -49,6 +49,13 @@ impl AMECA {
         let span = span!(Level::TRACE, "AMECA", "shard" = ctx.shard_id.to_string());
         let _enter = span.enter();
         match event {
+            serenity::FullEvent::GuildMemberAddition {
+                new_member
+            } => {
+                let new_member = new_member.user.clone();
+                PgPool::new_user(&data.db,new_member).await?;
+            },
+
             serenity::FullEvent::Message { new_message } => {
                 let mut to_print = String::new();
                 let msg = new_message.clone();
@@ -302,18 +309,21 @@ impl AMECA {
         info!("Starting caching of data");
         let ctx = ctx.clone();
         let thread: JoinHandle<BoxResult<()>> = tokio::spawn(async move {
-            let guilds = ctx.http.get_guilds(None, None).await?;
-            trace!("Received data {:?}", &guilds);
-            for guild in guilds {
-                AMECA::cache_guild(&ctx, &data, guild).await?;
+            loop {
+                let guilds = ctx.http.get_guilds(None, None).await?;
+                trace!("Received data {:?}", &guilds);
+                for guild in guilds {
+                    AMECA::cache_guild(&ctx, &data, guild).await?;
+                }
+                tokio::time::sleep(Duration::from_hours(1)).await;
             }
-            Ok(())
         });
         thread.await??;
 
         Ok(())
     }
     pub async fn start_shard(token: String, db: Pool<Postgres>, args: Args) -> BoxResult<()> {
+
         let mut settings = Settings::default();
         settings.max_messages = 0;
 
@@ -387,6 +397,8 @@ impl AMECA {
             }
         });
         client.start_shards(args.shards as u32).await?;
+
+
         Ok(())
     }
 }
