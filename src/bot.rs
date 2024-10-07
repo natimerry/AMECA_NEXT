@@ -1,4 +1,3 @@
-
 mod automod;
 mod banned_patterns;
 mod purge;
@@ -15,7 +14,7 @@ use crate::models::guilds::GuildData;
 use crate::models::member::MemberData;
 use crate::models::messasges::{DbMessage, MessageData};
 use crate::models::role::Role;
-use crate::{BoxResult, DynError};
+use crate::{Args, BoxResult, DynError};
 use dashmap::DashMap;
 use poise::builtins::register_globally;
 use poise::serenity_prelude as serenity;
@@ -26,9 +25,11 @@ use serenity::all::{ChannelType, MessagePagination, Settings};
 use sqlx::types::chrono::Utc;
 use sqlx::{PgPool, Pool, Postgres};
 use std::ops::Deref;
+use std::thread::sleep;
+use std::time::Duration;
 use tokio::task::JoinHandle;
 use tracing::log::debug;
-use tracing::{error, info, trace, warn};
+use tracing::{error, info, span, trace, warn, Level};
 
 #[derive(Clone)]
 pub struct AMECA {
@@ -45,6 +46,8 @@ impl AMECA {
         _framework: poise::FrameworkContext<'_, AMECA, DynError>,
         data: &AMECA,
     ) -> BoxResult<()> {
+        let span = span!(Level::TRACE, "AMECA", "shard" = ctx.shard_id.to_string());
+        let _enter = span.enter();
         match event {
             serenity::FullEvent::Message { new_message } => {
                 let mut to_print = String::new();
@@ -197,7 +200,8 @@ impl AMECA {
                                 "Updating roles for {} for reacting to watched msg!",
                                 &add_reaction.user_id.unwrap()
                             );
-                            let x = ctx.http
+                            let x = ctx
+                                .http
                                 .add_member_role(
                                     add_reaction.guild_id.unwrap(),
                                     add_reaction.user_id.unwrap(),
@@ -208,10 +212,10 @@ impl AMECA {
                                     )),
                                 )
                                 .await;
-                            match x{
+                            match x {
                                 Ok(_) => {}
                                 Err(e) => {
-                                    info!("Error assigning roles {:#?}",e);
+                                    info!("Error assigning roles {:#?}", e);
                                 }
                             }
                         }
@@ -268,7 +272,7 @@ impl AMECA {
             let last_msg = channel.last_message_id;
 
             if let Some(last_msg) = last_msg {
-                let msgs = ctx
+                let mut msgs = ctx
                     .http
                     .get_messages(
                         channel.id,
@@ -276,6 +280,8 @@ impl AMECA {
                         Some(100),
                     )
                     .await?;
+                let msg = ctx.http.get_message(channel_binding.id,last_msg).await?;
+                msgs.push(msg);
                 for msg in msgs {
                     DbMessage::new_message(&data.db, msg, channel_binding.clone()).await?;
                 }
@@ -305,7 +311,7 @@ impl AMECA {
 
         Ok(())
     }
-    pub async fn start_shard(token: String, db: Pool<Postgres>, cache: bool) -> BoxResult<()> {
+    pub async fn start_shard(token: String, db: Pool<Postgres>, args: Args) -> BoxResult<()> {
         let mut settings = Settings::default();
         settings.max_messages = 0;
 
@@ -341,7 +347,7 @@ impl AMECA {
                             ))
                             .await?,
                         db,
-                        cache,
+                        cache: args.cache,
                         cached_regex: x,
                         watch_msgs: DashMap::new(),
                     })
@@ -356,12 +362,29 @@ impl AMECA {
             | serenity::GatewayIntents::GUILD_MEMBERS
             | serenity::GatewayIntents::privileged();
 
-        let client = serenity::ClientBuilder::new(token, intents)
+        let mut client = serenity::ClientBuilder::new(token, intents)
             .framework(framework)
             .cache_settings(settings)
-            .await;
+            .await
+            .expect("Error creating client");
 
-        client.unwrap().start().await?;
+        let manager = client.shard_manager.clone();
+        tokio::spawn(async move {
+            let span = span!(Level::TRACE, "latency_check");
+            let _enter = span.enter();
+            loop {
+                tokio::time::sleep(Duration::from_secs(300)).await;
+                let shard_runners = manager.runners.lock().await;
+
+                for (id, runner) in shard_runners.iter() {
+                    info!(
+                        "Shard ID {} is {} with a latency of {:?}",
+                        id, runner.stage, runner.latency,
+                    );
+                }
+            }
+        });
+        client.start_shards(args.shards as u32).await?;
         Ok(())
     }
 }

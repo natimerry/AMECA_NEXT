@@ -1,8 +1,8 @@
-use tracing::log::{info, trace};
+use crate::bot::AMECA;
 use crate::BoxResult;
 use poise::serenity_prelude::{GuildId, MessageId, RoleId};
 use sqlx::FromRow;
-use crate::bot::AMECA;
+use tracing::log::{info, trace};
 
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct Role {
@@ -37,10 +37,9 @@ impl RoleData for Role {
         let msg_id = msg_id.get() as i64;
         let role_id = role_id.get() as i64;
         let guild_id = guild_id.get() as i64;
-        #[derive(FromRow)]
-        #[derive(Debug)]
-struct SomeShit{
-            id: i32
+        #[derive(FromRow, Debug)]
+        struct SomeShit {
+            id: i32,
         }
         let shit: SomeShit = sqlx::query_as(
             "INSERT INTO reaction_role(roles_id, name, msg_id,emoji,guild_id) VALUES ($1, $2, $3,$4,$5) RETURNING id").bind(role_id)
@@ -61,7 +60,7 @@ struct SomeShit{
             msg_id,
             guild_id,
         };
-        trace!("Role obj {:#?}",role);
+        trace!("Role obj {:#?}", role);
 
         db.watch_msgs
             .entry(guild_id)

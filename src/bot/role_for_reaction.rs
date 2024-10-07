@@ -2,33 +2,34 @@ use crate::bot::automod::cache_roles;
 use crate::models::channel::{Channel, ChannelData};
 use crate::models::role::{Role as DbRole, RoleData};
 use crate::{BoxResult, Context};
-use tracing::log::{debug, error, trace};
 use poise::futures_util::Stream;
 use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::{
-    futures, Color, CreateEmbed, CreateEmbedAuthor, ReactionType,
-    Role,
+    futures, CacheHttp, Color, CreateEmbed, CreateEmbedAuthor, ReactionType, Role,
 };
+use tracing::log::{debug, error, trace};
 
-use std::str::FromStr;
 use log::warn;
+use std::str::FromStr;
 use tracing::info;
 
 async fn autocomplete_emojis<'a>(
     ctx: Context<'_>,
     partial: &'a str,
-) -> impl Stream<Item=String> + 'a {
+) -> impl Stream<Item = String> + 'a {
     use poise::futures_util::StreamExt;
     let guild_id = ctx.guild_id().expect("Cannot get guild ID");
 
-    let role_names = sqlx::query_as::<_, crate::models::role::Role>("SELECT * from reaction_role WHERE guild_id = $1")
-        .bind(guild_id.get() as i64)
-        .fetch_all(&ctx.data().db)
-        .await
-        .expect("Error getting autocomplete channels")
-        .iter()
-        .map(|channel| channel.name.clone())
-        .collect::<Vec<_>>();
+    let role_names = sqlx::query_as::<_, crate::models::role::Role>(
+        "SELECT * from reaction_role WHERE guild_id = $1",
+    )
+    .bind(guild_id.get() as i64)
+    .fetch_all(&ctx.data().db)
+    .await
+    .expect("Error getting autocomplete channels")
+    .iter()
+    .map(|channel| channel.name.clone())
+    .collect::<Vec<_>>();
 
     let role_binding = role_names.clone();
     let x = futures::stream::iter(role_binding.to_owned())
@@ -42,7 +43,7 @@ async fn autocomplete_emojis<'a>(
     guild_only = true,
     required_permissions = "MANAGE_ROLES",
     required_bot_permissions = "MANAGE_ROLES",
-    ephemeral = "true",
+    ephemeral = "true"
 )]
 pub async fn stop_watching_for_reactions(
     ctx: Context<'_>,
@@ -57,8 +58,8 @@ pub async fn stop_watching_for_reactions(
         name,
         guild
     )
-        .execute(&ctx.data().db)
-        .await?;
+    .execute(&ctx.data().db)
+    .await?;
     cache_roles(&ctx.data()).await?;
     let embed = CreateEmbed::new()
         .author(CreateEmbedAuthor::new("AMECA_NEXT").url("https://github.com/AMECA_NEXT"))
@@ -70,7 +71,7 @@ pub async fn stop_watching_for_reactions(
         &ctx.data().db,
         ctx.guild_id().unwrap(),
     )
-        .await?;
+    .await?;
     ctx.say("Removed rule from database").await?;
     Ok(())
 }
@@ -79,8 +80,8 @@ pub async fn stop_watching_for_reactions(
     slash_command,
     guild_only = "true",
     required_permissions = "MANAGE_ROLES",
-    required_bot_permissions = "MANAGE_ROLES"
-
+    required_bot_permissions = "MANAGE_ROLES",
+    ephemeral = "true"
 )]
 pub async fn set_role_assignment(
     ctx: Context<'_>,
@@ -89,55 +90,67 @@ pub async fn set_role_assignment(
     role: Role,
     name: String,
 ) -> BoxResult<()> {
-
     trace!("Received role to setup relation with {:?}", role);
     debug!("{} {}", msg_id, emoji);
     let channel = ctx.channel_id();
-    match ctx
-        .http()
-        .create_reaction(channel, msg_id, &ReactionType::from_str(&emoji)?.into())
-        .await
-    {
-        Ok(_) => {}
-        Err(e) => {
-            ctx.say("Invalid emoji provided! Use a emoji in the guild or a default emoji please!")
-                .await?;
-            error!("{}",e);
-            warn!("Continuing with procedure since bot may still work?");
-        }
-    }
 
-    match DbRole::new_reaction_role(
-        &ctx.data(),
-        msg_id,
-        role.id,
-        ctx.guild_id().unwrap(),
-        name,
-        emoji,
-    )
-        .await
-    {
+    let msg = ctx.http().get_message(channel, msg_id).await;
+    if let Err(e) = msg {
+        error!("Error getting message: {}", e);
+        return Err(Box::new(e));
+    }
+    let msg = msg.unwrap();
+    let reaction = msg.react(ctx, ReactionType::Unicode(emoji.clone())).await;
+    match reaction {
         Ok(_) => {
-            let msg_url = format!(
-                "https://discord.com/channels/{}/{}/{}",
-                ctx.guild_id().unwrap().get(),
-                channel.get(),
-                msg_id.get()
-            );
-            ctx.say(format!("Watching {msg_url} for reactions!"))
-                .await?;
+            ctx.say("Set reaction  to msg!").await?;
+            match DbRole::new_reaction_role(
+                &ctx.data(),
+                msg_id,
+                role.id,
+                ctx.guild_id().unwrap(),
+                name,
+                emoji,
+            )
+            .await
+            {
+                Ok(_) => {
+                    let msg_url = format!(
+                        "https://discord.com/channels/{}/{}/{}",
+                        ctx.guild_id().unwrap().get(),
+                        channel.get(),
+                        msg_id.get()
+                    );
+                    ctx.say(format!("Watching {msg_url} for reactions!"))
+                        .await?;
+                }
+                Err(e) => {
+                    error!("Error in setting role-msg relation {e:#?}");
+                    ctx.say("Error in setting role-msg relation. Check logs for more detail")
+                        .await?;
+                    let embed = CreateEmbed::new()
+                        .author(
+                            CreateEmbedAuthor::new("AMECA_NEXT")
+                                .url("https://github.com/AMECA_NEXT"),
+                        )
+                        .color(Color::from_rgb(220, 0, 220))
+                        .title("Failed to save to database")
+                        .field("Error", &format!("```\n{:#?}```", e), false);
+                    Channel::send_to_logging_channel(
+                        embed,
+                        &ctx,
+                        &ctx.data().db,
+                        ctx.guild_id().unwrap(),
+                    )
+                    .await?;
+                }
+            }
         }
         Err(e) => {
-            error!("Error in setting role-msg relation {e:#?}");
-            ctx.say("Error in setting role-msg relation. Check logs for more detail")
+            ctx.say("Something went wrong reacting to the message! Check the emoji / bot perms")
                 .await?;
-            let embed = CreateEmbed::new()
-                .author(CreateEmbedAuthor::new("AMECA_NEXT").url("https://github.com/AMECA_NEXT"))
-                .color(Color::from_rgb(220, 0, 220))
-                .title("Failed to parse regex")
-                .field("Error", &format!("```\n{:#?}```", e), false);
-            Channel::send_to_logging_channel(embed, &ctx, &ctx.data().db, ctx.guild_id().unwrap())
-                .await?;
+            error!("{:#?}", e);
+            ctx.say(e.to_string()).await?;
         }
     }
 

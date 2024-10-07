@@ -1,12 +1,12 @@
 use crate::models::channel::ChannelData;
 use crate::models::member::{MemberData, Members};
 use crate::{models, BoxResult};
-use tracing::log::trace;
 use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::MessageId;
 use serenity::all::{GuildChannel, User};
 use sqlx::types::chrono::{DateTime, Utc};
 use sqlx::{FromRow, PgPool, Pool, Postgres};
+use tracing::log::trace;
 use tracing::warn;
 
 #[derive(FromRow, Clone, Debug, Default)]

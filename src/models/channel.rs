@@ -1,9 +1,9 @@
 use crate::BoxResult;
-use tracing::log::{error, warn};
 use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::{CacheHttp, CreateEmbed, CreateMessage, GuildId};
 use serenity::all::GuildChannel;
 use sqlx::{FromRow, PgPool, Pool, Postgres};
+use tracing::log::{error, warn};
 use tracing::{debug, trace};
 
 #[derive(Debug, FromRow)]
@@ -52,12 +52,12 @@ impl ChannelData for Channel {
         ctx: impl CacheHttp,
         db: &Pool<Postgres>,
         guild_id: GuildId,
-    ) -> BoxResult<()>{
+    ) -> BoxResult<()> {
         let log_channel = Channel::get_logging_channel(&db, guild_id).await;
         if let Some(log_channel) = log_channel {
             let channel_obj = serenity::ChannelId::from(log_channel.channel_id as u64);
             let msg_builder = CreateMessage::new().embed(embed);
-            channel_obj.send_message(&ctx,msg_builder).await?;
+            channel_obj.send_message(&ctx, msg_builder).await?;
             // mark msg in db as deleted !!!
         } else {
             warn!("No logging channel found! Adding deletion to the log");

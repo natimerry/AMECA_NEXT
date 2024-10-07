@@ -1,13 +1,11 @@
 use crate::bot::automod::cache_regex;
 use crate::models::channel::{Channel as DbChannel, ChannelData};
 use crate::{BoxResult, Context};
-use tracing::log::info;
 use poise::futures_util::Stream;
-use poise::serenity_prelude::{
-    futures, Color, CreateEmbed, CreateEmbedAuthor, CreateMessage,
-};
 use poise::futures_util::StreamExt;
+use poise::serenity_prelude::{futures, Color, CreateEmbed, CreateEmbedAuthor, CreateMessage};
 use regex::Regex;
+use tracing::log::info;
 use tracing::{debug, trace};
 
 async fn autocomplete_pattern<'a>(
@@ -57,13 +55,18 @@ pub async fn remove_banned_pattern(
         "DELETE FROM prohibited_words_for_guild WHERE name = $1 AND guild_id=$2",
         name,
         guild
-    ).execute(&ctx.data().db).await?;
+    )
+    .execute(&ctx.data().db)
+    .await?;
     cache_regex(&ctx.data().db, &ctx.data()).await?;
-    trace!("Cached map:{:#?}",ctx.data().db);
+    trace!("Cached map:{:#?}", ctx.data().db);
     let embed = CreateEmbed::new()
         .author(CreateEmbedAuthor::new("AMECA_NEXT").url("https://github.com/AMECA_NEXT"))
         .color(Color::from_rgb(0, 244, 0))
         .title(format!("Deleting regex entry `{}`", &name));
+
+    ctx.say("Removed rule from database").await?;
+
     DbChannel::send_to_logging_channel(
         embed,
         &ctx.serenity_context(),
@@ -71,7 +74,6 @@ pub async fn remove_banned_pattern(
         ctx.guild_id().unwrap(),
     )
     .await?;
-    ctx.say("Removed rule from database").await?;
     Ok(())
 }
 
@@ -102,7 +104,8 @@ pub async fn ban_pattern(
             ).bind(&name).bind(&pattern).bind(&author).bind(&guild)
                 .fetch_one(&ctx.data().db).await?;
 
-            ctx.data().cached_regex
+            ctx.data()
+                .cached_regex
                 .entry(guild)
                 .and_modify(|list| list.push(_re.clone()))
                 .or_insert(vec![_re]);

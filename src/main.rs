@@ -20,22 +20,26 @@ type Context<'a> = poise::Context<'a, AMECA, DynError>;
 #[derive(Debug)]
 struct Args {
     cache: bool,
+    shards: i64,
 }
 
 fn parse_args() -> BoxResult<Args> {
     use lexopt::prelude::*;
     let mut cache = false;
-
+    let mut shards = 1;
     let mut parser = lexopt::Parser::from_env();
     while let Some(arg) = parser.next()? {
         match arg {
             Short('c') | Long("cache") => {
                 cache = true;
             }
+            Short('s') | Long("shards") => {
+                shards = parser.value()?.parse()?;
+            }
             _ => (),
         }
     }
-    Ok(Args { cache })
+    Ok(Args { cache, shards })
 }
 
 pub async fn database_init() -> BoxResult<Pool<Postgres>> {
@@ -90,7 +94,7 @@ async fn main() {
     let args = parse_args();
     debug!("{:?}", args);
     if let Ok(args) = args {
-        AMECA::start_shard(token, db, args.cache)
+        AMECA::start_shard(token, db, args)
             .await
             .expect("Error starting shard");
     }

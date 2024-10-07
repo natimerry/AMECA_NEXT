@@ -1,5 +1,5 @@
 use crate::{BoxResult, Context};
-use poise::serenity_prelude::{ MessagePagination};
+use poise::serenity_prelude::MessagePagination;
 
 #[poise::command(
     slash_command,

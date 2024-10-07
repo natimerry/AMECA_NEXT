@@ -1,17 +1,15 @@
 use crate::bot::AMECA;
+use crate::models::channel::ChannelData;
 use crate::models::messasges::DbMessage;
+use crate::models::role::Role;
 use crate::BoxResult;
 use poise::serenity_prelude as serenity;
-use poise::serenity_prelude::{
-    Color, Context, CreateEmbed, CreateEmbedFooter, GuildId,
-};
+use poise::serenity_prelude::{Channel, Color, Context, CreateEmbed, CreateEmbedFooter, GuildId};
 use regex::Regex;
 use serenity::all::Message;
 use sqlx::{FromRow, PgPool};
 use std::ops::Deref;
 use tracing::{debug, info, trace};
-use crate::models::channel::ChannelData;
-use crate::models::role::Role;
 
 #[derive(FromRow, Debug)]
 struct Banned {
@@ -24,7 +22,9 @@ struct Banned {
 
 pub async fn cache_roles(data: &AMECA) -> BoxResult<()> {
     data.watch_msgs.clear();
-    let list_of_roles: Vec<Role> = sqlx::query_as("SELECT * from reaction_role").fetch_all(&data.db).await?;
+    let list_of_roles: Vec<Role> = sqlx::query_as("SELECT * from reaction_role")
+        .fetch_all(&data.db)
+        .await?;
     for role in &list_of_roles {
         let guild = role.guild_id;
         debug!("Caching role to map {role:#?}");
@@ -40,17 +40,15 @@ pub async fn cache_roles(data: &AMECA) -> BoxResult<()> {
 
 pub async fn cache_regex(db: &PgPool, data: &AMECA) -> BoxResult<()> {
     data.cached_regex.clear();
-    let list_of_banned_patterns: Vec<Banned> = sqlx::query_as(
-        "SELECT id,name,pattern,author,guild_id FROM prohibited_words_for_guild",
-    )
-        .fetch_all(db)
-        .await?;
+    let list_of_banned_patterns: Vec<Banned> =
+        sqlx::query_as("SELECT id,name,pattern,author,guild_id FROM prohibited_words_for_guild")
+            .fetch_all(db)
+            .await?;
 
     trace!("{:?}", list_of_banned_patterns);
     info!("Syncing to bot");
     for banned_word in list_of_banned_patterns {
-        let re =
-            Regex::new(&format!(r"{}", banned_word.pattern)).expect("Unable to compile regex");
+        let re = Regex::new(&format!(r"{}", banned_word.pattern)).expect("Unable to compile regex");
         debug!("Caching regex to map {re:#?}");
         data.cached_regex
             .entry(banned_word.guild_id)
@@ -66,7 +64,6 @@ pub async fn analyse_word(db: &PgPool, msg: Message, data: &AMECA) -> BoxResult<
         trace!("{:?}", &msg);
         cache_regex(db, data).await?;
     }
-
     let guild_id = msg.guild_id.unwrap_or(GuildId::from(1231232131231));
     let id = guild_id.get() as i64;
     let vec = data.cached_regex.get(&id);
@@ -109,7 +106,8 @@ pub async fn log_msg_delete(
             "https://github.com/natimerry/ameca_next",
         ));
     // let msg = CreateMessage::new().embed(embed);
-    crate::models::channel::Channel::send_to_logging_channel(embed, &ctx, &data.db, guild_id).await?;
+    crate::models::channel::Channel::send_to_logging_channel(embed, &ctx, &data.db, guild_id)
+        .await?;
     trace!("{:?}", msg);
 
     Ok(())
