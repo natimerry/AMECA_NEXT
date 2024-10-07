@@ -9,7 +9,7 @@ use regex::Regex;
 use serenity::all::Message;
 use sqlx::{FromRow, PgPool};
 use std::ops::Deref;
-use tracing::{debug, info, trace};
+use tracing::{debug, info, span, trace, Level};
 
 #[derive(FromRow, Debug)]
 struct Banned {
@@ -113,6 +113,8 @@ pub async fn log_msg_delete(
     Ok(())
 }
 pub async fn on_msg(msg: Message, db: &PgPool, data: &AMECA, ctx: &Context) -> BoxResult<()> {
+    let span = span!(Level::TRACE,"AUTOMOD", "shard" = ctx.shard_id.to_string());
+    let _ = span.enter();
     if msg.author.id.get() == std::env::var("BOT_USER").unwrap().parse::<u64>().unwrap() {
         return Ok(());
     }

@@ -297,6 +297,8 @@ impl AMECA {
     }
 
     pub async fn cache_data(ctx: &serenity::Context, data: AMECA) -> BoxResult<()> {
+        let span = span!(Level::TRACE,"cache", "shard" = ctx.shard_id.to_string());
+        let _ = span.enter();
         info!("Starting caching of data");
         let ctx = ctx.clone();
         let thread: JoinHandle<BoxResult<()>> = tokio::spawn(async move {

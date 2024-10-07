@@ -4,9 +4,7 @@ use crate::models::role::{Role as DbRole, RoleData};
 use crate::{BoxResult, Context};
 use poise::futures_util::Stream;
 use poise::serenity_prelude as serenity;
-use poise::serenity_prelude::{
-    futures, CacheHttp, Color, CreateEmbed, CreateEmbedAuthor, ReactionType, Role,
-};
+use poise::serenity_prelude::{futures, CacheHttp, ChannelId, Color, CreateEmbed, CreateEmbedAuthor, ReactionType, Role};
 use tracing::log::{debug, error, trace};
 
 use log::warn;
@@ -92,8 +90,17 @@ pub async fn set_role_assignment(
 ) -> BoxResult<()> {
     trace!("Received role to setup relation with {:?}", role);
     debug!("{} {}", msg_id, emoji);
-    let channel = ctx.channel_id();
-
+    struct ChannelOfMsg {
+        channel_id: i64,
+    }
+    let channel = sqlx::query_as!(
+        ChannelOfMsg,
+        "SELECT channel_id as \"channel_id!\" FROM message WHERE msg_id = $1",
+        msg_id.get() as i64
+    )
+    .fetch_one(&ctx.data().db)
+    .await?;
+    let channel = ChannelId::from(channel.channel_id as u64);
     let msg = ctx.http().get_message(channel, msg_id).await;
     if let Err(e) = msg {
         error!("Error getting message: {}", e);
