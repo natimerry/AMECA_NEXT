@@ -1,0 +1,6 @@
+/.env
+/target/
+/.idea/
+/logs/
+/.devcontainer/
+/.github/

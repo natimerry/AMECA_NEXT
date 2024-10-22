@@ -1,8 +1,7 @@
 FROM rust:slim-bullseye as build
 LABEL authors="nat"
-RUN USER=root apt-get update -y && apt-get -y install lld pkg-config libssl-dev
+RUN USER=root apt-get update -y && apt-get -y install pkg-config libssl-dev lld
 RUN USER=root cargo new --bin ameca_pg
-RUN cargo install sqlx-cli
 WORKDIR /ameca_pg
 
 # 2. Copy our manifests
@@ -13,15 +12,10 @@ RUN cargo build --release
 RUN rm src/*.rs
 
 COPY . .
-ENV SQLX_OFFLINE=true
-RUN cargo sqlx prepare
 RUN cargo build --release
 
-RUN rm ./target/release/deps/ameca_pg*
-
 FROM rust:slim-bullseye
-
 WORKDIR /app
-COPY --from=build /ameca_pg/target/release/ameca_pg ./ameca_pg
 RUN touch ./.env
+COPY --from=build /ameca_pg/target/release/ameca_pg ./ameca_pg
 CMD ["./ameca_pg"]
