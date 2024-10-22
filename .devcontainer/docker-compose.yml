@@ -1,7 +1,5 @@
 version: '3.8'
 
-volumes:
-  postgres-data:
 
 services:
   app:
@@ -27,8 +25,6 @@ services:
   db:
     image: postgres:14.1
     restart: unless-stopped
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
     env_file:
         # Ensure that the variables in .env match the same variables in devcontainer.json
         - .env

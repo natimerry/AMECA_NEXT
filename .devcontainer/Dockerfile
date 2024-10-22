@@ -9,3 +9,4 @@ RUN apt-get update --fix-missing && export DEBIAN_FRONTEND=noninteractive \
 RUN cargo install sqlx-cli
 
 ENV RUSTFLAGS="-Z threads=12 --cfg tokio_unstable"
+RUN rustup default  nightly

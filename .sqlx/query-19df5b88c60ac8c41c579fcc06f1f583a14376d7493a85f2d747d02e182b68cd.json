@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO guild (guild_id,members,join_date,name) VALUES ($1,$2,$3::TIMESTAMPTZ,$4)\n            ON CONFLICT(guild_id) DO UPDATE SET\n            join_date=excluded.join_date,\n            name = excluded.name,\n            members = excluded.members;",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int4",
+        "Timestamptz",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "19df5b88c60ac8c41c579fcc06f1f583a14376d7493a85f2d747d02e182b68cd"
+}

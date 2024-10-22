@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO guild_join_member(guild_id, member_id, time) VALUES ($1,$2,$3::timestamptz) ON CONFLICT DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0cf139a076d637075409610e588745c0466ef595573dfc956fc802fad8ed583a"
+}
