@@ -1,6 +1,5 @@
 services:
   ameca:
-    container_name: ameca_bot
     network_mode: bridge
     build:
       context: .
