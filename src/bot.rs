@@ -403,7 +403,7 @@ impl AMECA {
             let span = span!(Level::TRACE, "latency_check");
             let _enter = span.enter();
             loop {
-                tokio::time::sleep(Duration::from_secs(300)).await;
+                tokio::time::sleep(Duration::from_secs(3600)).await;
                 let shard_runners = manager.runners.lock().await;
 
                 for (id, runner) in shard_runners.iter() {
