@@ -298,9 +298,15 @@ impl AMECA {
                         Some(MessagePagination::Before(last_msg)),
                         Some(100),
                     )
-                    .await?;
-                let msg = ctx.http.get_message(channel_binding.id, last_msg).await?;
-                msgs.push(msg);
+                    .await.unwrap_or(vec![]); 
+                let msg = ctx.http.get_message(channel_binding.id, last_msg).await;
+                debug!("caching {:?}",&msg);
+                if let Ok(msg) = msg{
+                    msgs.push(msg);
+                }
+                else{
+                    error!("Error in getting msg");
+                }
                 for msg in msgs {
                     DbMessage::new_message(&data.db, msg, channel_binding.clone()).await?;
                 }
@@ -327,6 +333,7 @@ impl AMECA {
                 for guild in guilds {
                     AMECA::cache_guild(&ctx, &data, guild).await?;
                 }
+                info!("Finished data caching");
                 tokio::time::sleep(Duration::from_secs(500)).await;
             }
         });
