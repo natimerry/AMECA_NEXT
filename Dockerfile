@@ -20,4 +20,4 @@ FROM rust:slim-bullseye
 WORKDIR /app
 RUN touch ./.env
 COPY --from=build /ameca_pg/target/release/ameca_pg ./ameca_pg
-CMD ["./ameca_pg --cache"]
+CMD ["./ameca_pg","-c"]
