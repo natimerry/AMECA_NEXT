@@ -9,7 +9,6 @@ services:
       - .env
     environment:
       - LOG_LEVEL=ameca_pg=debug,info
-      - DATABASE_URL=postgres://postgres:postgres@postgres_deployment:5432/ameca
      # - DISCORD_TOKEN=""
     #  - BOT_USER=""
     volumes:
