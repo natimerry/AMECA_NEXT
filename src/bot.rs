@@ -327,7 +327,7 @@ impl AMECA {
                 for guild in guilds {
                     AMECA::cache_guild(&ctx, &data, guild).await?;
                 }
-                tokio::time::sleep(Duration::from_hours(1)).await;
+                tokio::time::sleep(Duration::from_secs(3600)).await;
             }
         });
         thread.await??;

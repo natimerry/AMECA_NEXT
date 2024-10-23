@@ -1,4 +1,3 @@
-#![feature(duration_constructors)]
 #![allow(dead_code)]
 extern crate core;
 
