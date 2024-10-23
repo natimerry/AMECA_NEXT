@@ -1,20 +1,7 @@
 services:
-  db:
-    image: postgres
-    container_name: ameca_pg_deploy
-    restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: ameca
-    networks:
-      - test_network
   ameca:
     container_name: ameca_bot
-    networks:
-      - test_network
-    depends_on:
-      - db
+    network_mode: bridge
     build:
       context: .
       dockerfile: Dockerfile
@@ -22,6 +9,7 @@ services:
       - .env
     environment:
       - LOG_LEVEL=ameca_pg=debug,info
+      - DATABASE_URL=postgres://postgres:postgres@postgres_deployment:5432/ameca
      # - DISCORD_TOKEN=""
     #  - BOT_USER=""
     volumes:
@@ -29,7 +17,3 @@ services:
     # Overrides default command so things don't shut down after the process ends.
     ports:
       - 4444:4444
-
-networks:
-  test_network:
-    driver: bridge
