@@ -51,7 +51,6 @@ dependencies = [
  "dashmap 6.1.0",
  "dotenv",
  "lexopt",
- "log",
  "miniserde",
  "poise",
  "regex",

@@ -4,11 +4,9 @@ use crate::models::role::{Role as DbRole, RoleData};
 use crate::{BoxResult, Context};
 use poise::futures_util::Stream;
 use poise::serenity_prelude as serenity;
-use poise::serenity_prelude::{futures, CacheHttp, ChannelId, Color, CreateEmbed, CreateEmbedAuthor, ReactionType, Role};
+use poise::serenity_prelude::{futures, ChannelId, Color, CreateEmbed, CreateEmbedAuthor, ReactionType, Role};
 use tracing::log::{debug, error, trace};
 
-use log::warn;
-use std::str::FromStr;
 use tracing::info;
 
 async fn autocomplete_emojis<'a>(

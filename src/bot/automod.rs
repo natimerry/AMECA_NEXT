@@ -1,15 +1,15 @@
 use crate::bot::AMECA;
 use crate::models::channel::ChannelData;
-use crate::models::messasges::DbMessage;
+use crate::models::messasges::{DbMessage, MessageData};
 use crate::models::role::Role;
 use crate::BoxResult;
-use poise::serenity_prelude as serenity;
-use poise::serenity_prelude::{Channel, Color, Context, CreateEmbed, CreateEmbedFooter, GuildId};
+use poise::serenity_prelude::{self as serenity, ChannelId, MessageId};
+use poise::serenity_prelude::{Color, Context, CreateEmbed, CreateEmbedFooter, GuildId};
 use regex::Regex;
 use serenity::all::Message;
 use sqlx::{FromRow, PgPool};
 use std::ops::Deref;
-use tracing::{debug, info, span, trace, Level};
+use tracing::{debug, error, info, span, trace, warn, Level};
 
 #[derive(FromRow, Debug)]
 struct Banned {
@@ -19,6 +19,76 @@ struct Banned {
     author: i64,
     guild_id: i64,
 }
+
+pub async fn on_msg_delete(ctx: &Context,data: &AMECA,channel_id: &ChannelId,deleted_message_id: &MessageId,guild_id: &Option<GuildId>) -> BoxResult<()>{
+    debug!(
+        "Message deleted in channel `{}:{:?} deleted message '{}'",
+        channel_id.name(&ctx).await?,
+        channel_id,
+        deleted_message_id.get()
+    );
+
+    let x = DbMessage::fetch_message(&data.db, deleted_message_id).await;
+    let guild_id = guild_id.unwrap();
+
+    match x {
+        Err(e) => {
+            error!("Unable to fetch message in db: {}", e);
+        }
+        Ok(Some(mut msg)) => {
+            msg.mark_deleted(&data.db).await?;
+            log_msg_delete(msg, guild_id, &ctx, data).await?;
+        }
+        Ok(None) => {
+            warn!("Deleted message unavailable in the database");
+        }
+    }
+    Ok(())
+}
+
+pub async fn on_new_msg(ctx: &Context,data: &AMECA,new_message: &Message) -> BoxResult<()>{
+    if let None = new_message.guild_id {
+        debug!(
+            "BOT DM: {} (Message is not sent in a guild!)",
+            new_message.content
+        );
+        return Ok(());
+    }
+    let mut to_print = String::new();
+    let msg = new_message.clone();
+    if &new_message.embeds.len() > &0 {
+        to_print = (&new_message)
+            .embeds
+            .iter()
+            .map(|m| format!("EMBED({:?})", m))
+            .collect::<Vec<String>>()
+            .join("\n");
+    } else {
+        to_print = msg.content;
+    }
+    let guild_id = new_message.guild_id.unwrap().to_string();
+
+    info!(
+        guild_id,
+        "New message: {} {} in {:?}:{:?}",
+        to_print,
+        new_message.author.name,
+        new_message.guild_id,
+        new_message.channel_id,
+    );
+
+    let channel = new_message.channel(&ctx.http).await?;
+    let res =
+        DbMessage::new_message(&data.db, new_message.clone(), channel.guild().unwrap())
+            .await;
+
+    if let Err(e) = res {
+        error!("Unable to store message in db: {}", e);
+    }
+    analyse_msg(new_message.clone(), &data.db, &data, &ctx).await?;
+    Ok(())
+}
+
 
 pub async fn cache_roles(data: &AMECA) -> BoxResult<()> {
     data.watch_msgs.clear();
@@ -112,7 +182,7 @@ pub async fn log_msg_delete(
 
     Ok(())
 }
-pub async fn on_msg(msg: Message, db: &PgPool, data: &AMECA, ctx: &Context) -> BoxResult<()> {
+async fn analyse_msg(msg: Message, db: &PgPool, data: &AMECA, ctx: &Context) -> BoxResult<()> {
     let span = span!(Level::TRACE,"AUTOMOD", "shard" = ctx.shard_id.to_string());
     let _ = span.enter();
     if msg.author.id.get() == std::env::var("BOT_USER").unwrap().parse::<u64>().unwrap() {
