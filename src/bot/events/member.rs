@@ -17,10 +17,10 @@ pub async fn on_user_join(ctx: &Context, data: &AMECA, new_member: &Member) -> B
         .author(CreateEmbedAuthor::new("AMECA").url("https://github.com/natimerry/AMECA_NEXT"))
         .title(format!("{} joined!", new_member.user.name))
         .color(Color::from_rgb(0, 255, 0))
-        .field("Join Time", format!("`{}`", Utc::now().to_string()), false)
+        .field("Join Time", format!("`{}`", Utc::now()), false)
         .field(
             "User Details",
-            format!("id: {}", new_member.user.id.to_string()),
+            format!("id: {}", new_member.user.id),
             false,
         );
 
@@ -50,11 +50,11 @@ pub async fn user_leave(
         .title(format!("{} left", user.name))
         .color(Color::from_rgb(255, 0, 0))
         .field("Join Time", format!("`{}`", time_of_join), false)
-        .field("Leave Time", format!("`{}`", Utc::now().to_string()), false)
+        .field("Leave Time", format!("`{}`", Utc::now()), false)
         .field("Time of stay ", format!("`{} Days {} Hours {} Minutes {} Seconds`", days,hours,minutes,seconds), false)
         .field(
             "User Details",
-            format!("id: {}", user.id.to_string()),
+            format!("id: {}", user.id),
             false,
         );
 

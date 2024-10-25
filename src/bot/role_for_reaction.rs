@@ -28,10 +28,10 @@ async fn autocomplete_emojis<'a>(
     .collect::<Vec<_>>();
 
     let role_binding = role_names.clone();
-    let x = futures::stream::iter(role_binding.to_owned())
+    futures::stream::iter(role_binding.to_owned())
         .filter(move |name| futures::future::ready(name.starts_with(partial)))
-        .map(|name| name.clone().to_string());
-    x
+        .map(|name| name.clone().to_string())
+    
 }
 
 #[poise::command(
@@ -56,7 +56,7 @@ pub async fn stop_watching_for_reactions(
     )
     .execute(&ctx.data().db)
     .await?;
-    cache_roles(&ctx.data()).await?;
+    cache_roles(ctx.data()).await?;
     let embed = CreateEmbed::new()
         .author(CreateEmbedAuthor::new("AMECA_NEXT").url("https://github.com/AMECA_NEXT"))
         .color(Color::from_rgb(0, 244, 0))
@@ -110,7 +110,7 @@ pub async fn set_role_assignment(
         Ok(_) => {
             ctx.say("Set reaction  to msg!").await?;
             match DbRole::new_reaction_role(
-                &ctx.data(),
+                ctx.data(),
                 msg_id,
                 role.id,
                 ctx.guild_id().unwrap(),
@@ -140,7 +140,7 @@ pub async fn set_role_assignment(
                         )
                         .color(Color::from_rgb(220, 0, 220))
                         .title("Failed to save to database")
-                        .field("Error", &format!("```\n{:#?}```", e), false);
+                        .field("Error", format!("```\n{:#?}```", e), false);
                     Channel::send_to_logging_channel(
                         embed,
                         &ctx,

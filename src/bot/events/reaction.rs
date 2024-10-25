@@ -11,11 +11,11 @@ use crate::{bot::{automod::cache_roles, AMECA}, models::role::Role as DbRole, Bo
 async fn is_reaction_watched(ctx: &Context,data:&AMECA,reaction:&Reaction) -> BoxResult<Option<DbRole>> {
     if data.watch_msgs.is_empty() {
         info!("Caching role reactions I have to react to!");
-        cache_roles(&data).await?;
+        cache_roles(data).await?;
     }
     trace!("{:#?}", reaction);
     let guild = reaction.guild_id;
-    if let None = guild {
+    if guild.is_none() {
         debug!(
             "Reaction {} is not in an guild",
             reaction.channel_id.name(&ctx).await?
@@ -35,14 +35,14 @@ async fn is_reaction_watched(ctx: &Context,data:&AMECA,reaction:&Reaction) -> Bo
         Some(guild_watchlist) => {
             let guild_watchlist = guild_watchlist.deref();
             for role_for_reaction in guild_watchlist {
-                if reaction.emoji.to_string() == role_for_reaction.emoji.to_string() {
+                if reaction.emoji.to_string() == role_for_reaction.emoji {
                    return Ok(Some(role_for_reaction.clone()));
                 }
             }
         }
         None => return Ok(None),
     }
-    return Ok(None);
+    Ok(None)
 }
 
 
@@ -71,7 +71,7 @@ pub async fn reaction_add(ctx: &Context,data: &AMECA,add_reaction: &Reaction) ->
             }
         }
     }
-    return Ok(())
+    Ok(())
 }
 
 pub async fn reaction_delete(ctx: &Context,data: &AMECA,delete_reaction: &Reaction) -> BoxResult<()>{

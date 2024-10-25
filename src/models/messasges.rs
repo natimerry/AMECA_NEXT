@@ -65,9 +65,9 @@ impl DbMessage {
         .fetch_optional(db)
         .await?;
 
-        if let None = db_author {
+        if db_author.is_none() {
             warn!("Message author is not cached!");
-            PgPool::new_user(&db, author.clone()).await?;
+            PgPool::new_user(db, author.clone()).await?;
         }
 
         struct Dummychannel {
@@ -81,9 +81,9 @@ impl DbMessage {
         .fetch_optional(db)
         .await?;
 
-        if let None = db_channel {
+        if db_channel.is_none() {
             warn!("Message channel is not cached!");
-            models::channel::Channel::new_channel(&db, &channel).await?;
+            models::channel::Channel::new_channel(db, &channel).await?;
         }
 
         Ok(())
@@ -120,7 +120,7 @@ impl MessageData for DbMessage {
         Ok(
             sqlx::query_as::<_, DbMessage>("SELECT * FROM message WHERE msg_id = $1;")
                 .bind(msg_id.get() as i64)
-                .fetch_optional(&*db)
+                .fetch_optional(db)
                 .await?,
         )
     }

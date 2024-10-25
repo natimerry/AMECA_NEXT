@@ -60,7 +60,7 @@ impl AMECA {
             serenity::FullEvent::Ready { .. } => {
                 info!("Bot is ready to start!");
                 if data.cache {
-                    AMECA::cache_data(&ctx, data.clone()).await?;
+                    AMECA::cache_data(ctx, data.clone()).await?;
                 }
                 info!("Bot is ready!");
             }
@@ -77,7 +77,7 @@ impl AMECA {
                     &data.db,
                     guild.member_count as i32,
                     &guild.id,
-                    &*guild.name,
+                    &guild.name,
                     time,
                 )
                 .await?;
@@ -131,10 +131,10 @@ impl AMECA {
                 );
             }
             serenity::FullEvent::ReactionAdd { add_reaction } => {
-                reaction_add(&ctx,&data,&add_reaction).await?;
+                reaction_add(ctx,data,add_reaction).await?;
             }
             serenity::FullEvent::ReactionRemove { removed_reaction } => {
-                reaction_delete(&ctx, &data, &removed_reaction).await?;
+                reaction_delete(ctx, data, removed_reaction).await?;
             }
             #[allow(unused_variables)]
             serenity::FullEvent::GuildMemberRemoval { guild_id, user, member_data_if_available } => {
@@ -156,7 +156,7 @@ impl AMECA {
             &data.db,
             guild_members.len() as i32,
             &guild.id,
-            &*guild.name,
+            &guild.name,
             Utc::now(),
         )
         .await?;

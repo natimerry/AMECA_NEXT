@@ -26,10 +26,9 @@ async fn autocomplete_channel<'a>(
         .collect::<Vec<_>>();
 
     let channel_binding = channel_name.clone();
-    let x = futures::stream::iter(channel_binding.to_owned())
+    futures::stream::iter(channel_binding.to_owned())
         .filter(move |name| futures::future::ready(name.starts_with(partial)))
-        .map(|name| name.clone().to_string());
-    x
+        .map(|name| name.clone().to_string())
 }
 
 #[command(
@@ -105,7 +104,7 @@ pub async fn register_logging_channel(
         Err(e) => {
             error!("Error checking existing logging channel: {}", e);
             ctx.say("Error checking existing logging channel").await?;
-            return Err(e.into());
+            return Err(e);
         }
     }
     info!(

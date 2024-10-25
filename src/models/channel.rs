@@ -53,7 +53,7 @@ impl ChannelData for Channel {
         db: &Pool<Postgres>,
         guild_id: GuildId,
     ) -> BoxResult<()> {
-        let log_channel = Channel::get_logging_channel(&db, guild_id).await;
+        let log_channel = Channel::get_logging_channel(db, guild_id).await;
         if let Some(log_channel) = log_channel {
             let channel_obj = serenity::ChannelId::from(log_channel.channel_id as u64);
             let msg_builder = CreateMessage::new().embed(embed);

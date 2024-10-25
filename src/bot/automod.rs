@@ -37,7 +37,7 @@ pub async fn on_msg_delete(ctx: &Context,data: &AMECA,channel_id: &ChannelId,del
         }
         Ok(Some(mut msg)) => {
             msg.mark_deleted(&data.db).await?;
-            log_msg_delete(msg, guild_id, &ctx, data).await?;
+            log_msg_delete(msg, guild_id, ctx, data).await?;
         }
         Ok(None) => {
             warn!("Deleted message unavailable in the database");
@@ -47,7 +47,7 @@ pub async fn on_msg_delete(ctx: &Context,data: &AMECA,channel_id: &ChannelId,del
 }
 
 pub async fn on_new_msg(ctx: &Context,data: &AMECA,new_message: &Message) -> BoxResult<()>{
-    if let None = new_message.guild_id {
+    if new_message.guild_id.is_none() {
         debug!(
             "BOT DM: {} (Message is not sent in a guild!)",
             new_message.content
@@ -57,8 +57,8 @@ pub async fn on_new_msg(ctx: &Context,data: &AMECA,new_message: &Message) -> Box
     #[allow(unused_assignments)]
     let mut to_print = String::new();
     let msg = new_message.clone();
-    if &new_message.embeds.len() > &0 {
-        to_print = (&new_message)
+    if !new_message.embeds.is_empty() {
+        to_print = (new_message)
             .embeds
             .iter()
             .map(|m| format!("EMBED({:?})", m))
@@ -86,7 +86,7 @@ pub async fn on_new_msg(ctx: &Context,data: &AMECA,new_message: &Message) -> Box
     if let Err(e) = res {
         error!("Unable to store message in db: {}", e);
     }
-    analyse_msg(new_message.clone(), &data.db, &data, &ctx).await?;
+    analyse_msg(new_message.clone(), &data.db, data, ctx).await?;
     Ok(())
 }
 
@@ -119,7 +119,7 @@ pub async fn cache_regex(db: &PgPool, data: &AMECA) -> BoxResult<()> {
     trace!("{:?}", list_of_banned_patterns);
     info!("Syncing to bot");
     for banned_word in list_of_banned_patterns {
-        let re = Regex::new(&format!(r"{}", banned_word.pattern)).expect("Unable to compile regex");
+        let re = Regex::new(&banned_word.pattern.to_string()).expect("Unable to compile regex");
         debug!("Caching regex to map {re:#?}");
         data.cached_regex
             .entry(banned_word.guild_id)
@@ -168,7 +168,7 @@ pub async fn log_msg_delete(
         .description(format!(
             "Content: {}\nTime:{}\nChannel:<#{}>\nAuthor:<@{}>",
             msg.content,
-            msg.time.to_string(),
+            msg.time,
             msg.channel_id,
             msg.author_id
         ))

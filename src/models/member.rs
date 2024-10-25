@@ -61,7 +61,7 @@ impl MemberData for PgPool {
             user_id, guild_id
         );
 
-        let time: Relation= sqlx::query_as("SELECT time FROM guild_join_member WHERE guild_id = $1 AND member_id = $2").bind(guild_id).bind(user_id).fetch_one(&*db).await?;
+        let time: Relation= sqlx::query_as("SELECT time FROM guild_join_member WHERE guild_id = $1 AND member_id = $2").bind(guild_id).bind(user_id).fetch_one(db).await?;
         Ok(time.time)
     }
 

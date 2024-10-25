@@ -25,7 +25,7 @@ pub async fn purge<'a>(
     let msgs = ctx
         .http()
         .get_messages(
-            channel.id.clone(),
+            channel.id,
             Some(MessagePagination::Before(last_msg)),
             Some(number_to_purge as u8),
         )

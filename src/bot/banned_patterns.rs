@@ -31,10 +31,9 @@ async fn autocomplete_pattern<'a>(
     .collect::<Vec<String>>();
 
     let pattern_binding = pattern.clone();
-    let x = futures::stream::iter(pattern_binding.to_owned())
+    futures::stream::iter(pattern_binding.to_owned())
         .filter(move |name| futures::future::ready(name.starts_with(partial)))
-        .map(|name| name.clone().to_string());
-    x
+        .map(|name| name.clone().to_string())
 }
 
 #[poise::command(
@@ -58,7 +57,7 @@ pub async fn remove_banned_pattern(
     )
     .execute(&ctx.data().db)
     .await?;
-    cache_regex(&ctx.data().db, &ctx.data()).await?;
+    cache_regex(&ctx.data().db, ctx.data()).await?;
     trace!("Cached map:{:#?}", ctx.data().db);
     let embed = CreateEmbed::new()
         .author(CreateEmbedAuthor::new("AMECA_NEXT").url("https://github.com/AMECA_NEXT"))
@@ -101,7 +100,7 @@ pub async fn ban_pattern(
             struct DbGuildId(i64);
             sqlx::query(
                 "INSERT INTO prohibited_words_for_guild(name, pattern, author, guild_id) VALUES ($1,$2,$3,$4) RETURNING id",
-            ).bind(&name).bind(&pattern).bind(&author).bind(&guild)
+            ).bind(&name).bind(&pattern).bind(author).bind(guild)
                 .fetch_one(&ctx.data().db).await?;
 
             ctx.data()
@@ -134,11 +133,7 @@ pub async fn ban_pattern(
                 .author(CreateEmbedAuthor::new("AMECA_NEXT").url("https://github.com/AMECA_NEXT"))
                 .color(Color::from_rgb(220, 0, 220))
                 .title("Failed to parse regex")
-                .field(
-                    "Error",
-                    &format!("Pattern: {} ```\n{}```", pattern, e),
-                    true,
-                );
+                .field("Error", format!("Pattern: {} ```\n{}```", pattern, e), true);
             let msg = CreateMessage::new().embed(embed);
             ctx.channel_id().send_message(&ctx, msg).await?;
             return Ok(());
