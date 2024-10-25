@@ -17,7 +17,7 @@ use crate::{Args, BoxResult, DynError};
 use dashmap::DashMap;
 use events::reaction::{reaction_add, reaction_delete};
 use poise::builtins::register_globally;
-use poise::serenity_prelude as serenity;
+use poise::serenity_prelude::{self as serenity};
 use poise::serenity_prelude::FullEvent::Ratelimit;
 use poise::serenity_prelude::{GuildInfo, User, UserId};
 use regex::Regex;
@@ -62,9 +62,11 @@ impl AMECA {
                 }
                 info!("Bot is ready!");
             }
+            #[allow(unused_variables)]
             serenity::FullEvent::GuildDelete { incomplete, full } => {
                 info!("Bot has left the guild {} ", incomplete.id);
             }
+            #[allow(unused_variables)]
             serenity::FullEvent::GuildCreate { guild, is_new } => {
                 debug!("Bot received guild data for: {}", guild.name);
 

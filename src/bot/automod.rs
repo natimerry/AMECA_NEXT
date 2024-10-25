@@ -54,6 +54,7 @@ pub async fn on_new_msg(ctx: &Context,data: &AMECA,new_message: &Message) -> Box
         );
         return Ok(());
     }
+    #[allow(unused_assignments)]
     let mut to_print = String::new();
     let msg = new_message.clone();
     if &new_message.embeds.len() > &0 {
