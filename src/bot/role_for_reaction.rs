@@ -86,6 +86,8 @@ pub async fn set_role_assignment(
     role: Role,
     name: String,
 ) -> BoxResult<()> {
+    ctx.defer().await?;
+
     trace!("Received role to setup relation with {:?}", role);
     debug!("{} {}", msg_id, emoji);
     struct ChannelOfMsg {

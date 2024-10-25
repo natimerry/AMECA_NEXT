@@ -92,6 +92,7 @@ pub async fn ban_pattern(
     let author = ctx.author().id.get() as i64;
     let regex = Regex::new(&pattern);
 
+    ctx.defer().await?;
     match regex {
         Ok(_re) => {
             ctx.say("Regex compiled! Enforcing pattern starting from now!")

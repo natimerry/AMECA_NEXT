@@ -90,7 +90,7 @@ pub async fn register_logging_channel(
 ) -> BoxResult<()> {
     let channel_id = channel.id().get() as i64;
     let guild_id = ctx.guild_id().expect("Cannot get guild ID").get() as i64;
-
+    ctx.defer().await?;
     match check_existing_log_channel(guild_id, &ctx.data().db).await {
         Ok(Some(channel)) => {
             ctx.say("Logging channel already registered").await?;

@@ -17,6 +17,10 @@ pub async fn warn<'a>(ctx: Context<'a>, user: User, reason: Option<String>) -> B
     let user_id = user.id.get() as i64;
     let guild_id = ctx.guild_id().unwrap().get() as i64;
     // issue a new warning to dude
+
+    ctx.defer().await?;
+
+
     sqlx::query!(
         "INSERT INTO warnings_guild_member(guild_id, member_id) VALUES ($1,$2)",
         guild_id,
