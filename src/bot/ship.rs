@@ -1,24 +1,34 @@
 use std::cmp::{max, min};
 
 use poise::{
-    serenity_prelude::{Color, CreateEmbed, CreateEmbedAuthor, User, UserId},
+    serenity_prelude::{model::user, Color, CreateEmbed, CreateEmbedAuthor, User, UserId},
     CreateReply,
 };
 use sha2::{Digest, Sha256};
 
 use crate::{BoxResult, Context};
 
-#[poise::command(slash_command, guild_only = true)]
-pub async fn ship_two_users<'a>(ctx: Context<'a>, user: Option<User>) -> BoxResult<()> {
-    let target_user_id: u64 = if user.is_none() {
-        std::env::var("BOT_USER")
-            .expect("Unable to get bot user")
-            .parse()?
-    } else {
-        user.unwrap().id.get()
-    };
+#[poise::command(slash_command, prefix_command, guild_only = true)]
+pub async fn ship<'a>(
+    ctx: Context<'a>,
+    #[description = "First user to ship (optional)"] user1: Option<User>,
+    #[description = "User to ship with (optional)"] user2: Option<User>,
+) -> BoxResult<()> {
 
-    let user_id = ctx.author().id.get();
+    let (target_user_id, user_id) = if user1.is_some() && user2.is_none() {
+        // If user1 is present and user2 is empty, ship the author with user1
+        (user1.unwrap().id.get(), ctx.author().id.get())
+    } else if user2.is_some() && user1.is_none() {
+        // If user2 is present and user1 is empty, ship the author with user2
+        (user2.unwrap().id.get(), ctx.author().id.get())
+    } else {
+        // If both user1 and user2 are empty, ship the author with the bot user
+        let bot_user_id = std::env::var("BOT_USER")
+            .expect("Unable to get bot user")
+            .parse()
+            .expect("Invalid BOT_USER format");
+        (bot_user_id, ctx.author().id.get())
+    };
 
     let combined_ids = format!(
         "{}{}",
@@ -64,9 +74,11 @@ pub async fn ship_two_users<'a>(ctx: Context<'a>, user: Option<User>) -> BoxResu
         60..=79 => SUB_RESPONSES[1],
         40..=59 => SUB_RESPONSES[2],
         20..=39 => SUB_RESPONSES[3],
-        _ => RESPONSES[4],
+        _ => SUB_RESPONSES[4],
     };
-    let user_name = ctx
+
+    let user_name1 = ctx.http().get_user(UserId::from(user_id)).await?.name;
+    let user_name2 = ctx
         .http()
         .get_user(UserId::from(target_user_id))
         .await?
@@ -74,7 +86,7 @@ pub async fn ship_two_users<'a>(ctx: Context<'a>, user: Option<User>) -> BoxResu
     let embed = CreateEmbed::new()
         .author(CreateEmbedAuthor::new("AMECA").url("https://github.com/natimerry/AMECA_NEXT"))
         .title(format!(
-            "You are {}% compatible with {user_name}",
+            "{user_name1} is {}% compatible with {user_name2}",
             score as u8,
         ))
         .field(response, sub_response, false)

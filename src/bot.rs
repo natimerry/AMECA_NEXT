@@ -24,7 +24,7 @@ use poise::serenity_prelude::FullEvent::Ratelimit;
 use poise::serenity_prelude::{GuildInfo, User, UserId};
 use regex::Regex;
 use serenity::all::{ChannelType, MessagePagination, Settings};
-use ship::ship_two_users;
+use ship::ship;
 use sqlx::types::chrono::Utc;
 use sqlx::{PgPool, Pool, Postgres};
 use std::time::Duration;
@@ -256,13 +256,13 @@ impl AMECA {
                     remove_banned_pattern(),
                     set_role_assignment(),
                     stop_watching_for_reactions(),
-                    ship_two_users(),
+                    ship(),
                 ],
                 event_handler: |ctx, event, framework, data| {
                     Box::pin(AMECA::event_handler(ctx, event, framework, data))
                 },
                 prefix_options: poise::PrefixFrameworkOptions {
-                    prefix: Some("~".into()),
+                    prefix: Some("!".into()),
                     ..Default::default()
                 },
                 ..Default::default()
