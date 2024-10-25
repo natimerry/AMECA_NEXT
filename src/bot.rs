@@ -15,6 +15,7 @@ use crate::models::messasges::{DbMessage, MessageData};
 use crate::models::role::Role;
 use crate::{Args, BoxResult, DynError};
 use dashmap::DashMap;
+use events::member::user_leave;
 use events::reaction::{reaction_add, reaction_delete};
 use poise::builtins::register_globally;
 use poise::serenity_prelude::{self as serenity};
@@ -48,6 +49,7 @@ impl AMECA {
         let _enter = span.enter();
         match event {
             serenity::FullEvent::GuildMemberAddition { new_member } => {
+                events::member::on_user_join(ctx, data, new_member).await?;
                 let new_member = new_member.user.clone();
                 PgPool::new_user(&data.db, new_member).await?;
             }
@@ -133,6 +135,10 @@ impl AMECA {
             }
             serenity::FullEvent::ReactionRemove { removed_reaction } => {
                 reaction_delete(&ctx, &data, &removed_reaction).await?;
+            }
+            #[allow(unused_variables)]
+            serenity::FullEvent::GuildMemberRemoval { guild_id, user, member_data_if_available } => {
+                user_leave(ctx, data, *guild_id, user).await?;
             }
             &_ => (),
         }
