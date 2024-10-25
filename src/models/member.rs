@@ -11,7 +11,6 @@ use tracing::debug;
 pub struct Members {
     pub member_id: i64,
     pub name: String, // real name
-    pub warnings_issued: i32,
 }
 
 pub trait MemberData {
@@ -70,10 +69,9 @@ impl MemberData for PgPool {
         let name = &user.name;
         debug!("Inserting new user {:?} into database", &user);
         let _user = sqlx::query!(
-            "INSERT INTO member(member_id,name,warnings_issued) VALUES($1,$2,$3) ON CONFLICT DO NOTHING;",
+            "INSERT INTO member(member_id,name) VALUES($1,$2) ON CONFLICT DO NOTHING;",
             user_id,
             name,
-            0
         ).execute(db).await?;
         Ok(())
     }
