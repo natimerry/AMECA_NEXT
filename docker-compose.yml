@@ -25,7 +25,7 @@ services:
      # - DISCORD_TOKEN=""
     #  - BOT_USER=""
     volumes:
-      - /var/log/mempaste:/app/logs
+      - /var/log/ameca:/app/logs
     # Overrides default command so things don't shut down after the process ends.
     ports:
       - 4444:4444

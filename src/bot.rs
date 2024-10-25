@@ -246,7 +246,7 @@ impl AMECA {
                     AMECA::cache_guild(&ctx, &data, guild).await?;
                 }
                 info!("Finished data caching");
-                tokio::time::sleep(Duration::from_secs(500)).await;
+                tokio::time::sleep(Duration::from_secs(3600)).await;
             }
         });
         thread.await??;
