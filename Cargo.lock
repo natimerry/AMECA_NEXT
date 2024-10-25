@@ -54,6 +54,7 @@ dependencies = [
  "miniserde",
  "poise",
  "regex",
+ "sha2",
  "sqlx",
  "static_assertions",
  "tokio",

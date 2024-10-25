@@ -4,6 +4,7 @@ mod purge;
 mod register_bot;
 mod role_for_reaction;
 mod events;
+mod ship;
 use crate::bot::banned_patterns::{ban_pattern, remove_banned_pattern};
 use crate::bot::purge::purge;
 use crate::bot::register_bot::{deregister_logging, register_logging_channel};
@@ -23,6 +24,7 @@ use poise::serenity_prelude::FullEvent::Ratelimit;
 use poise::serenity_prelude::{GuildInfo, User, UserId};
 use regex::Regex;
 use serenity::all::{ChannelType, MessagePagination, Settings};
+use ship::ship_two_users;
 use sqlx::types::chrono::Utc;
 use sqlx::{PgPool, Pool, Postgres};
 use std::time::Duration;
@@ -254,6 +256,7 @@ impl AMECA {
                     remove_banned_pattern(),
                     set_role_assignment(),
                     stop_watching_for_reactions(),
+                    ship_two_users(),
                 ],
                 event_handler: |ctx, event, framework, data| {
                     Box::pin(AMECA::event_handler(ctx, event, framework, data))
