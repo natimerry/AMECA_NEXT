@@ -110,12 +110,16 @@ impl AMECA {
                                     .await;
 
                             if let Err(e) = msg {
-                                error!("Unable to store message in db: {}", e);
+                                let channel_id = channel.id.get();
+                                let guild_id = channel.guild_id.get();
+                                error!(channel_id,guild_id,"Unable to store message in db {}",e);
                             }
                         }
                     }
                     None => {
-                        warn!("No messages received for deleted channel!");
+                        let channel_id = channel.id.get();
+                        let guild_id = channel.guild_id.get();
+                        warn!(channel_id,guild_id,"No messages received for deleted channel!");
                     }
                 }
             }
@@ -207,13 +211,19 @@ impl AMECA {
                     msgs.push(msg);
                 }
                 else{
-                    error!("Error in getting msg");
+                    let channel = channel.id.get();
+                    let guild_id = guild.id.get();
+                    let guild_name = guild.name.clone();
+                    error!(channel,guild_id,guild_name,"Error in getting msg");
                 }
                 for msg in msgs {
                     DbMessage::new_message(&data.db, msg, channel_binding.clone()).await?;
                 }
             } else {
-                error!("Error in receiving last msg for channels... ");
+                let channel_id = channel.id.get();
+                let guild_id = guild.id.get();
+                let guild_name = guild.name.clone();
+                error!(channel_id,guild_id,guild_name,"Error in receiving last msg for channels... ");
                 let msgs = ctx.http.get_messages(channel.id, None, Some(100)).await?;
                 for msg in msgs {
                     DbMessage::new_message(&data.db, msg, channel_binding.clone()).await?;

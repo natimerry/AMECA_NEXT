@@ -20,7 +20,13 @@ struct Banned {
     guild_id: i64,
 }
 
-pub async fn on_msg_delete(ctx: &Context,data: &AMECA,channel_id: &ChannelId,deleted_message_id: &MessageId,guild_id: &Option<GuildId>) -> BoxResult<()>{
+pub async fn on_msg_delete(
+    ctx: &Context,
+    data: &AMECA,
+    channel_id: &ChannelId,
+    deleted_message_id: &MessageId,
+    guild_id: &Option<GuildId>,
+) -> BoxResult<()> {
     debug!(
         "Message deleted in channel `{}:{:?} deleted message '{}'",
         channel_id.name(&ctx).await?,
@@ -33,20 +39,28 @@ pub async fn on_msg_delete(ctx: &Context,data: &AMECA,channel_id: &ChannelId,del
 
     match x {
         Err(e) => {
-            error!("Unable to fetch message in db: {}", e);
+            let channel_id = channel_id.get();
+            let guild_id = guild_id.get();
+            error!(channel_id, guild_id, "Unable to fetch message in db: {}", e);
         }
         Ok(Some(mut msg)) => {
             msg.mark_deleted(&data.db).await?;
             log_msg_delete(msg, guild_id, ctx, data).await?;
         }
         Ok(None) => {
-            warn!("Deleted message unavailable in the database");
+            let channel_id = channel_id.get();
+            let guild_id = guild_id.get();
+            let msg_id = deleted_message_id.get();
+            warn!(
+                channel_id,
+                guild_id, msg_id, "Deleted message unavailable in the database"
+            );
         }
     }
     Ok(())
 }
 
-pub async fn on_new_msg(ctx: &Context,data: &AMECA,new_message: &Message) -> BoxResult<()>{
+pub async fn on_new_msg(ctx: &Context, data: &AMECA, new_message: &Message) -> BoxResult<()> {
     if new_message.guild_id.is_none() {
         debug!(
             "BOT DM: {} (Message is not sent in a guild!)",
@@ -79,17 +93,18 @@ pub async fn on_new_msg(ctx: &Context,data: &AMECA,new_message: &Message) -> Box
     );
 
     let channel = new_message.channel(&ctx.http).await?;
-    let res =
-        DbMessage::new_message(&data.db, new_message.clone(), channel.guild().unwrap())
-            .await;
+    let res = DbMessage::new_message(&data.db, new_message.clone(), channel.guild().unwrap()).await;
 
     if let Err(e) = res {
-        error!("Unable to store message in db: {}", e);
+        let content = to_print;
+        let msg_author = &new_message.author.name;
+        let guild = new_message.guild_id.unwrap().get();
+        let channel = new_message.channel_id.get();
+        error!(content,msg_author,guild,channel,"Unable to store message in db: {}", e);
     }
     analyse_msg(new_message.clone(), &data.db, data, ctx).await?;
     Ok(())
 }
-
 
 pub async fn cache_roles(data: &AMECA) -> BoxResult<()> {
     data.watch_msgs.clear();
@@ -167,10 +182,7 @@ pub async fn log_msg_delete(
         .title("Deleted Message")
         .description(format!(
             "Content: {}\nTime:{}\nChannel:<#{}>\nAuthor:<@{}>",
-            msg.content,
-            msg.time,
-            msg.channel_id,
-            msg.author_id
+            msg.content, msg.time, msg.channel_id, msg.author_id
         ))
         .color(Color::from_rgb(255, 0, 0))
         .footer(CreateEmbedFooter::new(
@@ -184,7 +196,7 @@ pub async fn log_msg_delete(
     Ok(())
 }
 async fn analyse_msg(msg: Message, db: &PgPool, data: &AMECA, ctx: &Context) -> BoxResult<()> {
-    let span = span!(Level::TRACE,"AUTOMOD", "shard" = ctx.shard_id.to_string());
+    let span = span!(Level::TRACE, "AUTOMOD", "shard" = ctx.shard_id.to_string());
     let _ = span.enter();
     if msg.author.id.get() == std::env::var("BOT_USER").unwrap().parse::<u64>().unwrap() {
         return Ok(());

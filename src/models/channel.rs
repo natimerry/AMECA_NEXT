@@ -3,7 +3,7 @@ use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::{CacheHttp, CreateEmbed, CreateMessage, GuildId};
 use serenity::all::GuildChannel;
 use sqlx::{FromRow, PgPool, Pool, Postgres};
-use tracing::log::{error, warn};
+use tracing::warn;
 use tracing::{debug, trace};
 
 #[derive(Debug, FromRow)]
@@ -72,7 +72,8 @@ impl ChannelData for Channel {
         .fetch_optional(db)
         .await;
         if let Err(ref e) = data {
-            error!("Error getting logging channel: {:?}", e);
+            let guild = guild_channel.get();
+            tracing::error!(guild,"Error getting logging channel: {:?}", e);
             None
         } else {
             data.unwrap()

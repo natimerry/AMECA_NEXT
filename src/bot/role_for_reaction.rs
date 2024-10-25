@@ -151,11 +151,15 @@ pub async fn set_role_assignment(
                 }
             }
         }
-        Err(e) => {
+        Err(error) => {
             ctx.say("Something went wrong reacting to the message! Check the emoji / bot perms")
                 .await?;
-            error!("{:#?}", e);
-            ctx.say(e.to_string()).await?;
+
+            let msg_id = msg.id.get();
+            let channel = channel.get();
+            let error = error.to_string();
+            tracing::error!(msg_id,channel,error,"Error in reactiong to watched message");
+            ctx.say(error).await?;
         }
     }
 

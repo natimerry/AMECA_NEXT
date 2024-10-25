@@ -1,7 +1,7 @@
 use std::cmp::{max, min};
 
 use poise::{
-    serenity_prelude::{model::user, Color, CreateEmbed, CreateEmbedAuthor, User, UserId},
+    serenity_prelude::{ Color, CreateEmbed, CreateEmbedAuthor, User, UserId},
     CreateReply,
 };
 use sha2::{Digest, Sha256};

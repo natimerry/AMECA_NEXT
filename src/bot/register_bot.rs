@@ -57,7 +57,8 @@ pub async fn deregister_logging(ctx: Context<'_>) -> BoxResult<()> {
         Err(e) => {
             ctx.say(format!("Failed to delete logging channel: {}", e))
                 .await?;
-            error!("Failed to delete logging channel: {}", e);
+            let guild_id = guild_id.get();
+            error!(guild_id,"Failed to delete logging channel: {}", e);
         }
     }
     Ok(())
@@ -102,7 +103,7 @@ pub async fn register_logging_channel(
         }
         Ok(None) => (),
         Err(e) => {
-            error!("Error checking existing logging channel: {}", e);
+            error!(guild_id,channel_id,"Error checking existing logging channel: {}", e);
             ctx.say("Error checking existing logging channel").await?;
             return Err(e);
         }
