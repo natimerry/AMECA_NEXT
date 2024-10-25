@@ -21,7 +21,11 @@ pub async fn ship<'a>(
     } else if user2.is_some() && user1.is_none() {
         // If user2 is present and user1 is empty, ship the author with user2
         (user2.unwrap().id.get(), ctx.author().id.get())
-    } else {
+    } 
+    else if user2.is_some() && user1.is_some(){
+        (user1.unwrap().id.get(), user2.unwrap().id.get())
+    }
+    else {
         // If both user1 and user2 are empty, ship the author with the bot user
         let bot_user_id = std::env::var("BOT_USER")
             .expect("Unable to get bot user")
