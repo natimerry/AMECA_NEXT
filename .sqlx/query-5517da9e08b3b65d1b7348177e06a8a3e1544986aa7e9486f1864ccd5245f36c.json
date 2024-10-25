@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE channel SET logging_channel = FALSE where logging_channel = TRUE and guild_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5517da9e08b3b65d1b7348177e06a8a3e1544986aa7e9486f1864ccd5245f36c"
+}

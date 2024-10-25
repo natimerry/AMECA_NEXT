@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM reaction_role WHERE name = $1 AND guild_id=$2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7500c8af0d010c8fe6e385ea09e043d1809de46320bbc3e7fe42f5f44f12e992"
+}

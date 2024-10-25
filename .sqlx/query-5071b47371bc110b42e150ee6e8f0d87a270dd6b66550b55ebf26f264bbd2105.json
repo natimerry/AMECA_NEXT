@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM prohibited_words_for_guild WHERE name = $1 AND guild_id=$2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5071b47371bc110b42e150ee6e8f0d87a270dd6b66550b55ebf26f264bbd2105"
+}
