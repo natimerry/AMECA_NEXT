@@ -14,7 +14,7 @@ RUN rm src/*.rs
 
 COPY ./src/ src/
 COPY ./migrations/ migrations/
-COPY ./.sqlx .sqxl/
+COPY ./.sqlx .sqlx/
 COPY ./sql sql/
 
 
