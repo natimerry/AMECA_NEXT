@@ -5,6 +5,7 @@ mod register_bot;
 mod role_for_reaction;
 mod events;
 mod ship;
+mod builtins;
 mod warn;
 use crate::bot::banned_patterns::{ban_pattern, remove_banned_pattern};
 use crate::bot::purge::purge;
@@ -28,11 +29,11 @@ use serenity::all::{ChannelType, MessagePagination, Settings};
 use ship::ship;
 use sqlx::types::chrono::Utc;
 use sqlx::{PgPool, Pool, Postgres};
+use warn::warn_user;
 use std::time::Duration;
 use tokio::task::JoinHandle;
 use tracing::log::debug;
 use tracing::{error, info, span, trace, warn, Level};
-use crate::bot::warn::warn;
 #[derive(Clone)]
 pub struct AMECA {
     pub bot: User,
@@ -268,7 +269,9 @@ impl AMECA {
                     set_role_assignment(),
                     stop_watching_for_reactions(),
                     ship(),
-                    warn(),
+                    warn_user(),
+                    builtins::help(),
+                    builtins::servers(),
                 ],
                 event_handler: |ctx, event, framework, data| {
                     Box::pin(AMECA::event_handler(ctx, event, framework, data))

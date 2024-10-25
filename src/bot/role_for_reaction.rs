@@ -39,7 +39,9 @@ async fn autocomplete_emojis<'a>(
     guild_only = true,
     required_permissions = "MANAGE_ROLES",
     required_bot_permissions = "MANAGE_ROLES",
-    ephemeral = "true"
+    ephemeral = "true",
+    name_localized("en-US","deregister_reaction"),
+    category = "administration"
 )]
 pub async fn stop_watching_for_reactions(
     ctx: Context<'_>,
@@ -47,6 +49,8 @@ pub async fn stop_watching_for_reactions(
     #[autocomplete = "autocomplete_emojis"]
     name: String,
 ) -> BoxResult<()> {
+
+
     let guild = ctx.guild().expect("Cannot get guild ID").id.get() as i64;
     info!("Removing regex entry `{}` from database ", name);
     sqlx::query!(
@@ -77,7 +81,8 @@ pub async fn stop_watching_for_reactions(
     guild_only = "true",
     required_permissions = "MANAGE_ROLES",
     required_bot_permissions = "MANAGE_ROLES",
-    ephemeral = "true"
+    ephemeral = "true",
+    category = "administration"
 )]
 pub async fn set_role_assignment(
     ctx: Context<'_>,
@@ -86,7 +91,7 @@ pub async fn set_role_assignment(
     role: Role,
     name: String,
 ) -> BoxResult<()> {
-    ctx.defer().await?;
+    ctx.defer_ephemeral().await?;
 
     trace!("Received role to setup relation with {:?}", role);
     debug!("{} {}", msg_id, emoji);

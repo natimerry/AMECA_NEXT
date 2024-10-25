@@ -5,7 +5,9 @@ use poise::serenity_prelude::MessagePagination;
     slash_command,
     required_permissions = "MANAGE_MESSAGES",
     required_bot_permissions = "MANAGE_MESSAGES",
-    guild_only = "true"
+    guild_only = "true",
+    category = "moderation"
+
 )]
 pub async fn purge<'a>(
     ctx: Context<'a>,

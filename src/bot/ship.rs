@@ -1,31 +1,33 @@
 use std::cmp::{max, min};
 
 use poise::{
-    serenity_prelude::{ Color, CreateEmbed, CreateEmbedAuthor, User, UserId},
+    serenity_prelude::{Color, CreateEmbed, CreateEmbedAuthor, User, UserId},
     CreateReply,
 };
 use sha2::{Digest, Sha256};
 
 use crate::{BoxResult, Context};
 
-#[poise::command(slash_command, prefix_command, guild_only = true)]
+#[poise::command(
+    slash_command,
+    prefix_command,
+    guild_only = true,
+    category = "entertainment"
+)]
 pub async fn ship<'a>(
     ctx: Context<'a>,
     #[description = "First user to ship (optional)"] user1: Option<User>,
     #[description = "User to ship with (optional)"] user2: Option<User>,
 ) -> BoxResult<()> {
-
     let (target_user_id, user_id) = if user1.is_some() && user2.is_none() {
         // If user1 is present and user2 is empty, ship the author with user1
         (user1.unwrap().id.get(), ctx.author().id.get())
     } else if user2.is_some() && user1.is_none() {
         // If user2 is present and user1 is empty, ship the author with user2
         (user2.unwrap().id.get(), ctx.author().id.get())
-    } 
-    else if user2.is_some() && user1.is_some(){
+    } else if user2.is_some() && user1.is_some() {
         (user1.unwrap().id.get(), user2.unwrap().id.get())
-    }
-    else {
+    } else {
         // If both user1 and user2 are empty, ship the author with the bot user
         let bot_user_id = std::env::var("BOT_USER")
             .expect("Unable to get bot user")

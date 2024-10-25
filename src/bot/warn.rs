@@ -1,4 +1,4 @@
-use poise::serenity_prelude::{Color, CreateEmbed, User};
+use poise::serenity_prelude::{Color, CreateEmbed, Member};
 use tracing::{debug, info};
 
 use crate::{
@@ -11,15 +11,32 @@ use crate::{
     slash_command,
     guild_only = true,
     required_permissions = "KICK_MEMBERS",
-    required_bot_permissions = "KICK_MEMBERS"
+    required_bot_permissions = "KICK_MEMBERS",
+    category = "moderation",
+    aliases("warn"),
+    name_localized("en-US", "warn")
 )]
-pub async fn warn<'a>(ctx: Context<'a>, user: User, reason: Option<String>) -> BoxResult<()> {
+pub async fn warn_user<'a>(
+    ctx: Context<'a>,
+    member: Member,
+    reason: Option<String>,
+) -> BoxResult<()> {
+    let user = member.clone().user;
     let user_id = user.id.get() as i64;
     let guild_id = ctx.guild_id().unwrap().get() as i64;
     // issue a new warning to dude
 
     ctx.defer().await?;
 
+    let serenity_http = ctx.serenity_context();
+    let perms = member
+        .permissions(serenity_http)
+        .expect("Unable to get permisssions for user");
+
+    if perms.administrator() || perms.manage_guild() || perms.manage_messages() {
+        ctx.say("You are not allowed to warn this user").await?;
+        return Ok(());
+    }
 
     sqlx::query!(
         "INSERT INTO warnings_guild_member(guild_id, member_id) VALUES ($1,$2)",
@@ -29,7 +46,7 @@ pub async fn warn<'a>(ctx: Context<'a>, user: User, reason: Option<String>) -> B
     .execute(&ctx.data().db)
     .await?;
     info!(user_id, guild_id, "Set warning relationship");
-    
+
     let row: (i64,) = sqlx::query_as(
         "SELECT COUNT(*) FROM warnings_guild_member WHERE guild_id = $1 AND member_id = $2",
     )
@@ -55,7 +72,8 @@ pub async fn warn<'a>(ctx: Context<'a>, user: User, reason: Option<String>) -> B
             "Reason",
             reason.unwrap_or("None provided".to_string()),
             false,
-        ).color(Color::from_rgb(255,255,0));
+        )
+        .color(Color::from_rgb(255, 255, 0));
 
     Channel::send_to_logging_channel(embed, ctx, &ctx.data().db, ctx.guild_id().unwrap()).await?;
 

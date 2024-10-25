@@ -34,7 +34,8 @@ async fn autocomplete_channel<'a>(
 #[command(
     slash_command,
     guild_only = "true",
-    required_permissions = "MANAGE_CHANNELS"
+    required_permissions = "MANAGE_CHANNELS",
+    category = "administration"
 )]
 pub async fn deregister_logging(ctx: Context<'_>) -> BoxResult<()> {
     let guild_id = ctx.guild_id().expect("Cannot get guild ID");
@@ -80,7 +81,8 @@ pub async fn check_existing_log_channel(
 #[command(
     slash_command,
     guild_only = "true",
-    required_permissions = "MANAGE_CHANNELS"
+    required_permissions = "MANAGE_CHANNELS",
+    category = "administration"
 )]
 pub async fn register_logging_channel(
     ctx: Context<'_>,

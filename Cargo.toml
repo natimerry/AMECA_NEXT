@@ -10,7 +10,7 @@ tokio = { version = "1.36.0", features = ["full"] }
 tracing-appender = "0.2.3"
 dotenv = "0.15.0"
 sqlx = {version = "0.8.2",features = ["chrono","postgres","runtime-tokio"]}
-poise = "0.6.1"
+poise = { version = "0.6.1", features = ["cache"] }
 lexopt = "0.3.0"
 static_assertions = "1.1.0"
 regex = "1.11.0"
