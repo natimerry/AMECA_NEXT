@@ -25,7 +25,7 @@ pub trait MemberData {
     fn get_user_join_time(db:&PgPool, user: User, guild:GuildId) -> impl Future<Output = BoxResult<DateTime<Utc>>>;
 }
 
-impl MemberData for PgPool {
+impl MemberData for Members {
     async fn mark_user_in_guild(
         db: &PgPool,
         user: User,

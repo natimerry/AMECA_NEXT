@@ -13,7 +13,7 @@ use crate::bot::register_bot::{deregister_logging, register_logging_channel};
 use crate::bot::role_for_reaction::{set_role_assignment, stop_watching_for_reactions};
 use crate::models::channel::{Channel, ChannelData};
 use crate::models::guilds::GuildData;
-use crate::models::member::MemberData;
+use crate::models::member::{MemberData, Members};
 use crate::models::messasges::{DbMessage, MessageData};
 use crate::models::role::Role;
 use crate::{Args, BoxResult, DynError};
@@ -55,7 +55,7 @@ impl AMECA {
             serenity::FullEvent::GuildMemberAddition { new_member } => {
                 events::member::on_user_join(ctx, data, new_member).await?;
                 let new_member = new_member.user.clone();
-                PgPool::new_user(&data.db, new_member).await?;
+                Members::new_user(&data.db, new_member).await?;
             }
 
             serenity::FullEvent::Message { new_message } => {
@@ -171,11 +171,11 @@ impl AMECA {
 
         // cache channels and members next
         for member in guild_members {
-            let created_user = PgPool::new_user(&data.db, member.user.clone()).await;
+            let created_user = Members::new_user(&data.db, member.user.clone()).await;
             match created_user {
                 Ok(_) => {
                     let timestamp = member.joined_at.unwrap().naive_utc().and_utc();
-                    PgPool::mark_user_in_guild(&data.db, member.user, guild.id, timestamp).await?;
+                    Members::mark_user_in_guild(&data.db, member.user, guild.id, timestamp).await?;
                 }
                 Err(e) => error!("Unable to mark user in guild {}: {}", guild.id, e),
             }

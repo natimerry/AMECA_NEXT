@@ -67,7 +67,7 @@ impl DbMessage {
 
         if db_author.is_none() {
             warn!("Message author is not cached!");
-            PgPool::new_user(db, author.clone()).await?;
+            Members::new_user(db, author.clone()).await?;
         }
 
         struct Dummychannel {
