@@ -10,6 +10,7 @@ services:
     networks:
       - test_network
   ameca:
+    restart: always
     container_name: ameca_bot
     networks:
       - test_network
