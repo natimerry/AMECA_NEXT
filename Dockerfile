@@ -12,11 +12,10 @@ COPY ./Cargo.toml ./Cargo.toml
 RUN cargo build --release
 RUN rm src/*.rs
 
-COPY ./src/ src/
 COPY ./migrations/ migrations/
 COPY ./.sqlx .sqlx/
 COPY ./sql sql/
-
+COPY ./src/ src/
 
 ENV SQLX_OFFLINE=true
 RUN cargo build --release
