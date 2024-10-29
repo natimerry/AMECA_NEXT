@@ -73,7 +73,7 @@ impl ChannelData for Channel {
         .await;
         if let Err(ref e) = data {
             let guild = guild_channel.get();
-            tracing::error!(guild,"Error getting logging channel: {:?}", e);
+            tracing::error!(guild, "Error getting logging channel: {:?}", e);
             None
         } else {
             data.unwrap()

@@ -1,5 +1,5 @@
-use crate::AMECA;
 use crate::BoxResult;
+use crate::AMECA;
 use poise::serenity_prelude::{GuildId, MessageId, RoleId};
 use sqlx::FromRow;
 use tracing::log::{info, trace};

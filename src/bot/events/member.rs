@@ -4,7 +4,6 @@ use poise::serenity_prelude::{
 
 use serenity::Context;
 use sqlx::types::chrono::Utc;
-use sqlx::PgPool;
 use tracing::info;
 
 use crate::models::channel::ChannelData;
@@ -18,11 +17,7 @@ pub async fn on_user_join(ctx: &Context, data: &AMECA, new_member: &Member) -> B
         .title(format!("{} joined!", new_member.user.name))
         .color(Color::from_rgb(0, 255, 0))
         .field("Join Time", format!("`{}`", Utc::now()), false)
-        .field(
-            "User Details",
-            format!("id: {}", new_member.user.id),
-            false,
-        );
+        .field("User Details", format!("id: {}", new_member.user.id), false);
 
     let username = new_member.user.name.clone();
     info!("User {username} has joined the guild {guild_id}");
@@ -51,12 +46,15 @@ pub async fn user_leave(
         .color(Color::from_rgb(255, 0, 0))
         .field("Join Time", format!("`{}`", time_of_join), false)
         .field("Leave Time", format!("`{}`", Utc::now()), false)
-        .field("Time of stay ", format!("`{} Days {} Hours {} Minutes {} Seconds`", days,hours,minutes,seconds), false)
         .field(
-            "User Details",
-            format!("id: {}", user.id),
+            "Time of stay ",
+            format!(
+                "`{} Days {} Hours {} Minutes {} Seconds`",
+                days, hours, minutes, seconds
+            ),
             false,
-        );
+        )
+        .field("User Details", format!("id: {}", user.id), false);
 
     let username = user.name.clone();
     info!("User {username} has joined the guild {guild_id}");

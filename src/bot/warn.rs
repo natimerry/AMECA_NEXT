@@ -19,8 +19,7 @@ use crate::{
 pub async fn warn_user<'a>(
     ctx: Context<'a>,
     member: Member,
-    #[rest]
-    reason: Option<String>,
+    #[rest] reason: Option<String>,
 ) -> BoxResult<()> {
     let user = member.clone().user;
     let user_id = user.id.get() as i64;

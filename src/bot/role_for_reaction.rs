@@ -39,9 +39,9 @@ async fn autocomplete_roles<'a>(
     prefix_command,
     slash_command,
     guild_only = true,
-    subcommands("stop", "add","stopbyid"),
+    subcommands("stop", "add", "stopbyid"),
     subcommand_required,
-    category = "administration",
+    category = "administration"
 )]
 // Omit 'ctx' parameter here. It is not needed, because this function will never be called.
 // TODO: Add a way to remove 'ctx' parameter, when `subcommand_required` is set
@@ -57,7 +57,7 @@ pub async fn reactionrole(_: Context<'_>) -> BoxResult<()> {
     required_bot_permissions = "MANAGE_ROLES",
     ephemeral = "true",
     category = "administration",
-    description_localized("en-US","Stop watching all reactions for a particular message")
+    description_localized("en-US", "Stop watching all reactions for a particular message")
 )]
 pub async fn stopbyid(
     ctx: Context<'_>,

@@ -31,13 +31,11 @@ async fn autocomplete_channel<'a>(
         .map(|name| name.clone().to_string())
 }
 
-
-
 #[poise::command(
     prefix_command,
     slash_command,
     guild_only = true,
-    subcommands("add","remove"),
+    subcommands("add", "remove"),
     subcommand_required,
     category = "administration"
 )]
@@ -53,7 +51,7 @@ pub async fn log_channel(_: Context<'_>) -> BoxResult<()> {
     required_permissions = "MANAGE_CHANNELS",
     category = "administration"
 )]
-pub async fn add(ctx: Context<'_>) -> BoxResult<()> {
+pub async fn remove(ctx: Context<'_>) -> BoxResult<()> {
     let guild_id = ctx.guild_id().expect("Cannot get guild ID");
     let _x = sqlx::query!(
         "UPDATE channel SET logging_channel = FALSE where logging_channel = TRUE and guild_id = $1",
@@ -75,7 +73,7 @@ pub async fn add(ctx: Context<'_>) -> BoxResult<()> {
             ctx.say(format!("Failed to delete logging channel: {}", e))
                 .await?;
             let guild_id = guild_id.get();
-            error!(guild_id,"Failed to delete logging channel: {}", e);
+            error!(guild_id, "Failed to delete logging channel: {}", e);
         }
     }
     Ok(())
@@ -100,7 +98,7 @@ pub async fn check_existing_log_channel(
     required_permissions = "MANAGE_CHANNELS",
     category = "administration"
 )]
-pub async fn remove(
+pub async fn add(
     ctx: Context<'_>,
     #[description = "Select logging channel"]
     #[autocomplete = "autocomplete_channel"]
@@ -121,7 +119,10 @@ pub async fn remove(
         }
         Ok(None) => (),
         Err(e) => {
-            error!(guild_id,channel_id,"Error checking existing logging channel: {}", e);
+            error!(
+                guild_id,
+                channel_id, "Error checking existing logging channel: {}", e
+            );
             ctx.say("Error checking existing logging channel").await?;
             return Err(e);
         }

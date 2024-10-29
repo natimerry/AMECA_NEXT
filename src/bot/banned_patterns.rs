@@ -41,8 +41,8 @@ async fn autocomplete_pattern<'a>(
     guild_only = true,
     required_permissions = "MANAGE_MESSAGES",
     required_bot_permissions = "MANAGE_MESSAGES",
-    description_localized("en-US","Unban regex pattrn"),
-    description_localized("en-GB","Unban regex pattrn"),
+    description_localized("en-US", "Unban regex pattrn"),
+    description_localized("en-GB", "Unban regex pattrn"),
     name_localized("en-US", "unban_pattern"),
     category = "moderation"
 )]
@@ -86,8 +86,8 @@ pub async fn remove_banned_pattern(
     guild_only = true,
     required_permissions = "MANAGE_MESSAGES",
     required_bot_permissions = "MANAGE_MESSAGES",
-    description_localized("en-US","Ban a pattern with regex"),
-    description_localized("en-GB","Ban a pattern with regex"),
+    description_localized("en-US", "Ban a pattern with regex"),
+    description_localized("en-GB", "Ban a pattern with regex"),
     category = "moderation"
 )]
 pub async fn ban_pattern(

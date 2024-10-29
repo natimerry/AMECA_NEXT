@@ -58,12 +58,11 @@ impl DbMessage {
     }
     async fn check_violations(db: &PgPool, author: &User, channel: GuildChannel) -> BoxResult<()> {
         // if a message author doesnt exist in the database create one
-        let db_author = sqlx::query_as::<_, Members>(
-            "SELECT member_id,name FROM member WHERE member_id = $1",
-        )
-        .bind(author.id.get() as i64)
-        .fetch_optional(db)
-        .await?;
+        let db_author =
+            sqlx::query_as::<_, Members>("SELECT member_id,name FROM member WHERE member_id = $1")
+                .bind(author.id.get() as i64)
+                .fetch_optional(db)
+                .await?;
 
         if db_author.is_none() {
             warn!("Message author is not cached!");

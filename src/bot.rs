@@ -1,12 +1,15 @@
+mod afk_member;
 mod automod;
 mod banned_patterns;
+mod builtins;
+mod events;
 mod purge;
 mod register_bot;
 mod role_for_reaction;
-mod events;
 mod ship;
-mod builtins;
 mod warn;
+
+use crate::bot::afk_member::afk;
 use crate::bot::banned_patterns::{ban_pattern, remove_banned_pattern};
 use crate::bot::purge::purge;
 use crate::bot::role_for_reaction::reactionrole;
@@ -20,8 +23,8 @@ use dashmap::DashMap;
 use events::member::user_leave;
 use events::reaction::{reaction_add, reaction_delete};
 use poise::builtins::register_globally;
-use poise::serenity_prelude::{self as serenity};
 use poise::serenity_prelude::FullEvent::Ratelimit;
+use poise::serenity_prelude::{self as serenity};
 use poise::serenity_prelude::{GuildInfo, User, UserId};
 use regex::Regex;
 use register_bot::log_channel;
@@ -29,11 +32,12 @@ use serenity::all::{ChannelType, MessagePagination, Settings};
 use ship::ship;
 use sqlx::types::chrono::Utc;
 use sqlx::{PgPool, Pool, Postgres};
-use warn::warn_user;
 use std::time::Duration;
 use tokio::task::JoinHandle;
 use tracing::log::debug;
 use tracing::{error, info, span, trace, warn, Level};
+use warn::warn_user;
+
 #[derive(Clone)]
 pub struct AMECA {
     pub bot: User,
@@ -113,14 +117,17 @@ impl AMECA {
                             if let Err(e) = msg {
                                 let channel_id = channel.id.get();
                                 let guild_id = channel.guild_id.get();
-                                error!(channel_id,guild_id,"Unable to store message in db {}",e);
+                                error!(channel_id, guild_id, "Unable to store message in db {}", e);
                             }
                         }
                     }
                     None => {
                         let channel_id = channel.id.get();
                         let guild_id = channel.guild_id.get();
-                        warn!(channel_id,guild_id,"No messages received for deleted channel!");
+                        warn!(
+                            channel_id,
+                            guild_id, "No messages received for deleted channel!"
+                        );
                     }
                 }
             }
@@ -139,13 +146,17 @@ impl AMECA {
                 );
             }
             serenity::FullEvent::ReactionAdd { add_reaction } => {
-                reaction_add(ctx,data,add_reaction).await?;
+                reaction_add(ctx, data, add_reaction).await?;
             }
             serenity::FullEvent::ReactionRemove { removed_reaction } => {
                 reaction_delete(ctx, data, removed_reaction).await?;
             }
             #[allow(unused_variables)]
-            serenity::FullEvent::GuildMemberRemoval { guild_id, user, member_data_if_available } => {
+            serenity::FullEvent::GuildMemberRemoval {
+                guild_id,
+                user,
+                member_data_if_available,
+            } => {
                 user_leave(ctx, data, *guild_id, user).await?;
             }
             &_ => (),
@@ -205,17 +216,17 @@ impl AMECA {
                         Some(MessagePagination::Before(last_msg)),
                         Some(100),
                     )
-                    .await.unwrap_or(vec![]); 
+                    .await
+                    .unwrap_or(vec![]);
                 let msg = ctx.http.get_message(channel_binding.id, last_msg).await;
-                debug!("caching {:?}",&msg);
-                if let Ok(msg) = msg{
+                debug!("caching {:?}", &msg);
+                if let Ok(msg) = msg {
                     msgs.push(msg);
-                }
-                else{
+                } else {
                     let channel = channel.id.get();
                     let guild_id = guild.id.get();
                     let guild_name = guild.name.clone();
-                    error!(channel,guild_id,guild_name,"Error in getting msg");
+                    error!(channel, guild_id, guild_name, "Error in getting msg");
                 }
                 for msg in msgs {
                     DbMessage::new_message(&data.db, msg, channel_binding.clone()).await?;
@@ -224,7 +235,10 @@ impl AMECA {
                 let channel_id = channel.id.get();
                 let guild_id = guild.id.get();
                 let guild_name = guild.name.clone();
-                error!(channel_id,guild_id,guild_name,"Error in receiving last msg for channels... ");
+                error!(
+                    channel_id,
+                    guild_id, guild_name, "Error in receiving last msg for channels... "
+                );
                 let msgs = ctx.http.get_messages(channel.id, None, Some(100)).await?;
                 for msg in msgs {
                     DbMessage::new_message(&data.db, msg, channel_binding.clone()).await?;
@@ -261,6 +275,7 @@ impl AMECA {
         let framework = poise::Framework::builder()
             .options(poise::FrameworkOptions {
                 commands: vec![
+                    afk(),
                     log_channel(),
                     purge(),
                     ban_pattern(),

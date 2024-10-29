@@ -1,14 +1,20 @@
-
 use std::ops::Deref;
 
 use poise::serenity_prelude::{self as serenity, Reaction, RoleId, UserId};
 use serenity::Context;
 use tracing::{debug, info, trace};
 
-use crate::{bot::{automod::cache_roles, AMECA}, models::role::Role as DbRole, BoxResult};
+use crate::{
+    bot::{automod::cache_roles, AMECA},
+    models::role::Role as DbRole,
+    BoxResult,
+};
 
-
-async fn is_reaction_watched(ctx: &Context,data:&AMECA,reaction:&Reaction) -> BoxResult<Option<DbRole>> {
+async fn is_reaction_watched(
+    ctx: &Context,
+    data: &AMECA,
+    reaction: &Reaction,
+) -> BoxResult<Option<DbRole>> {
     if data.watch_msgs.is_empty() {
         info!("Caching role reactions I have to react to!");
         cache_roles(data).await?;
@@ -31,12 +37,12 @@ async fn is_reaction_watched(ctx: &Context,data:&AMECA,reaction:&Reaction) -> Bo
     }
     let guild = guild.unwrap().get() as i64;
     let guild_watchlist = data.watch_msgs.get(&guild);
-    match guild_watchlist{
+    match guild_watchlist {
         Some(guild_watchlist) => {
             let guild_watchlist = guild_watchlist.deref();
             for role_for_reaction in guild_watchlist {
                 if reaction.emoji.to_string() == role_for_reaction.emoji {
-                   return Ok(Some(role_for_reaction.clone()));
+                    return Ok(Some(role_for_reaction.clone()));
                 }
             }
         }
@@ -45,9 +51,8 @@ async fn is_reaction_watched(ctx: &Context,data:&AMECA,reaction:&Reaction) -> Bo
     Ok(None)
 }
 
-
-pub async fn reaction_add(ctx: &Context,data: &AMECA,add_reaction: &Reaction) -> BoxResult<()>{
-    if let Some(role_for_reaction) = is_reaction_watched(ctx, data, add_reaction).await?{
+pub async fn reaction_add(ctx: &Context, data: &AMECA, add_reaction: &Reaction) -> BoxResult<()> {
+    if let Some(role_for_reaction) = is_reaction_watched(ctx, data, add_reaction).await? {
         info!(
             "Updating roles for {} for reacting to watched msg!",
             &add_reaction.user_id.unwrap()
@@ -74,8 +79,12 @@ pub async fn reaction_add(ctx: &Context,data: &AMECA,add_reaction: &Reaction) ->
     Ok(())
 }
 
-pub async fn reaction_delete(ctx: &Context,data: &AMECA,delete_reaction: &Reaction) -> BoxResult<()>{
-    if let Some(role_for_reaction) = is_reaction_watched(ctx, data, delete_reaction).await?{
+pub async fn reaction_delete(
+    ctx: &Context,
+    data: &AMECA,
+    delete_reaction: &Reaction,
+) -> BoxResult<()> {
+    if let Some(role_for_reaction) = is_reaction_watched(ctx, data, delete_reaction).await? {
         info!(
             "Updating roles for {} for reacting to watched msg!",
             &delete_reaction.user_id.unwrap()

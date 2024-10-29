@@ -22,7 +22,11 @@ pub trait MemberData {
         guild: GuildId,
         time: DateTime<Utc>,
     ) -> impl Future<Output = BoxResult<()>> + Send;
-    fn get_user_join_time(db:&PgPool, user: User, guild:GuildId) -> impl Future<Output = BoxResult<DateTime<Utc>>>;
+    fn get_user_join_time(
+        db: &PgPool,
+        user: User,
+        guild: GuildId,
+    ) -> impl Future<Output = BoxResult<DateTime<Utc>>>;
 }
 
 impl MemberData for Members {
@@ -47,10 +51,14 @@ impl MemberData for Members {
         Ok(())
     }
 
-    async fn get_user_join_time(db:&PgPool, user: User,guild:GuildId) -> BoxResult<DateTime<Utc>>{
+    async fn get_user_join_time(
+        db: &PgPool,
+        user: User,
+        guild: GuildId,
+    ) -> BoxResult<DateTime<Utc>> {
         #[derive(FromRow)]
-        struct Relation{
-            time: DateTime<Utc>
+        struct Relation {
+            time: DateTime<Utc>,
         }
         let user_id = user.id.get() as i64;
         let guild_id = guild.get() as i64;
@@ -60,7 +68,13 @@ impl MemberData for Members {
             user_id, guild_id
         );
 
-        let time: Relation= sqlx::query_as("SELECT time FROM guild_join_member WHERE guild_id = $1 AND member_id = $2").bind(guild_id).bind(user_id).fetch_one(db).await?;
+        let time: Relation = sqlx::query_as(
+            "SELECT time FROM guild_join_member WHERE guild_id = $1 AND member_id = $2",
+        )
+        .bind(guild_id)
+        .bind(user_id)
+        .fetch_one(db)
+        .await?;
         Ok(time.time)
     }
 
@@ -72,7 +86,9 @@ impl MemberData for Members {
             "INSERT INTO member(member_id,name) VALUES($1,$2) ON CONFLICT DO NOTHING;",
             user_id,
             name,
-        ).execute(db).await?;
+        )
+        .execute(db)
+        .await?;
         Ok(())
     }
 }
