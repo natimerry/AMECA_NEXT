@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO afk_member_guild(member_id,guild_id,time_afk) VALUES ($1,$2,$3)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a4f6840c5c0e9c220d13b26f3712ea6e5b8b40b71c66a2a3e0adc79ffc4ae1ad"
+}
