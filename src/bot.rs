@@ -9,8 +9,7 @@ mod builtins;
 mod warn;
 use crate::bot::banned_patterns::{ban_pattern, remove_banned_pattern};
 use crate::bot::purge::purge;
-use crate::bot::register_bot::{deregister_logging, register_logging_channel};
-use crate::bot::role_for_reaction::{set_role_assignment, stop_watching_for_reactions};
+use crate::bot::role_for_reaction::reactionrole;
 use crate::models::channel::{Channel, ChannelData};
 use crate::models::guilds::GuildData;
 use crate::models::member::{MemberData, Members};
@@ -25,6 +24,7 @@ use poise::serenity_prelude::{self as serenity};
 use poise::serenity_prelude::FullEvent::Ratelimit;
 use poise::serenity_prelude::{GuildInfo, User, UserId};
 use regex::Regex;
+use register_bot::log_channel;
 use serenity::all::{ChannelType, MessagePagination, Settings};
 use ship::ship;
 use sqlx::types::chrono::Utc;
@@ -261,13 +261,11 @@ impl AMECA {
         let framework = poise::Framework::builder()
             .options(poise::FrameworkOptions {
                 commands: vec![
-                    register_logging_channel(),
-                    deregister_logging(),
+                    log_channel(),
                     purge(),
                     ban_pattern(),
                     remove_banned_pattern(),
-                    set_role_assignment(),
-                    stop_watching_for_reactions(),
+                    reactionrole(),
                     ship(),
                     warn_user(),
                     builtins::help(),

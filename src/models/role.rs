@@ -1,4 +1,4 @@
-use crate::bot::AMECA;
+use crate::AMECA;
 use crate::BoxResult;
 use poise::serenity_prelude::{GuildId, MessageId, RoleId};
 use sqlx::FromRow;

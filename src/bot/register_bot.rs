@@ -31,13 +31,29 @@ async fn autocomplete_channel<'a>(
         .map(|name| name.clone().to_string())
 }
 
+
+
+#[poise::command(
+    prefix_command,
+    slash_command,
+    guild_only = true,
+    subcommands("add","remove"),
+    subcommand_required,
+    category = "administration"
+)]
+// Omit 'ctx' parameter here. It is not needed, because this function will never be called.
+pub async fn log_channel(_: Context<'_>) -> BoxResult<()> {
+    // This will never be called, because `subcommand_required` parameter is set
+    Ok(())
+}
+
 #[command(
     slash_command,
     guild_only = "true",
     required_permissions = "MANAGE_CHANNELS",
     category = "administration"
 )]
-pub async fn deregister_logging(ctx: Context<'_>) -> BoxResult<()> {
+pub async fn add(ctx: Context<'_>) -> BoxResult<()> {
     let guild_id = ctx.guild_id().expect("Cannot get guild ID");
     let _x = sqlx::query!(
         "UPDATE channel SET logging_channel = FALSE where logging_channel = TRUE and guild_id = $1",
@@ -84,7 +100,7 @@ pub async fn check_existing_log_channel(
     required_permissions = "MANAGE_CHANNELS",
     category = "administration"
 )]
-pub async fn register_logging_channel(
+pub async fn remove(
     ctx: Context<'_>,
     #[description = "Select logging channel"]
     #[autocomplete = "autocomplete_channel"]

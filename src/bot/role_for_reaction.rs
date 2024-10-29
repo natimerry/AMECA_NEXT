@@ -4,12 +4,14 @@ use crate::models::role::{Role as DbRole, RoleData};
 use crate::{BoxResult, Context};
 use poise::futures_util::Stream;
 use poise::serenity_prelude as serenity;
-use poise::serenity_prelude::{futures, ChannelId, Color, CreateEmbed, CreateEmbedAuthor, ReactionType, Role};
+use poise::serenity_prelude::{
+    futures, ChannelId, Color, CreateEmbed, CreateEmbedAuthor, ReactionType, Role,
+};
 use tracing::log::{debug, error, trace};
 
 use tracing::info;
 
-async fn autocomplete_emojis<'a>(
+async fn autocomplete_roles<'a>(
     ctx: Context<'_>,
     partial: &'a str,
 ) -> impl Stream<Item = String> + 'a {
@@ -31,7 +33,21 @@ async fn autocomplete_emojis<'a>(
     futures::stream::iter(role_binding.to_owned())
         .filter(move |name| futures::future::ready(name.starts_with(partial)))
         .map(|name| name.clone().to_string())
-    
+}
+
+#[poise::command(
+    prefix_command,
+    slash_command,
+    guild_only = true,
+    subcommands("stop", "add","stopbyid"),
+    subcommand_required,
+    category = "administration",
+)]
+// Omit 'ctx' parameter here. It is not needed, because this function will never be called.
+// TODO: Add a way to remove 'ctx' parameter, when `subcommand_required` is set
+pub async fn reactionrole(_: Context<'_>) -> BoxResult<()> {
+    // This will never be called, because `subcommand_required` parameter is set
+    Ok(())
 }
 
 #[poise::command(
@@ -40,19 +56,50 @@ async fn autocomplete_emojis<'a>(
     required_permissions = "MANAGE_ROLES",
     required_bot_permissions = "MANAGE_ROLES",
     ephemeral = "true",
-    name_localized("en-US","deregister_reaction"),
+    category = "administration",
+    description_localized("en-US","Stop watching all reactions for a particular message")
+)]
+pub async fn stopbyid(
+    ctx: Context<'_>,
+    #[description = "ID of the message that you want to stop watching reactions for"]
+    msg_id: serenity::MessageId,
+) -> BoxResult<()> {
+    let guild_id = ctx.guild_id().expect("Cannot get guild ID").get() as i64; // panic should be unreachable
+    let msg_id_i64 = msg_id.get() as i64;
+    ctx.defer_ephemeral().await?;
+    info!(msg_id_i64, "Removing role entry for ");
+
+    sqlx::query!(
+        "DELETE FROM reaction_role WHERE guild_id = $1 AND msg_id = $2",
+        guild_id,
+        msg_id_i64
+    )
+    .execute(&ctx.data().db)
+    .await?;
+
+    cache_roles(&ctx.data()).await?;
+
+    ctx.say("Stopped watching reactions!").await?;
+
+    Ok(())
+}
+
+#[poise::command(
+    slash_command,
+    guild_only = true,
+    required_permissions = "MANAGE_ROLES",
+    required_bot_permissions = "MANAGE_ROLES",
+    ephemeral = "true",
     category = "administration"
 )]
-pub async fn stop_watching_for_reactions(
+pub async fn stop(
     ctx: Context<'_>,
     #[description = "Name of the watch entry"]
-    #[autocomplete = "autocomplete_emojis"]
+    #[autocomplete = "autocomplete_roles"]
     name: String,
 ) -> BoxResult<()> {
-
-
     let guild = ctx.guild().expect("Cannot get guild ID").id.get() as i64;
-    info!("Removing regex entry `{}` from database ", name);
+    info!("Removing role entry `{}` from database ", name);
     sqlx::query!(
         "DELETE FROM reaction_role WHERE name = $1 AND guild_id=$2",
         name,
@@ -84,7 +131,7 @@ pub async fn stop_watching_for_reactions(
     ephemeral = "true",
     category = "administration"
 )]
-pub async fn set_role_assignment(
+pub async fn add(
     ctx: Context<'_>,
     msg_id: serenity::MessageId,
     emoji: String,
@@ -98,6 +145,8 @@ pub async fn set_role_assignment(
     struct ChannelOfMsg {
         channel_id: i64,
     }
+
+    // get the database entry of the channel message was sent in
     let channel = sqlx::query_as!(
         ChannelOfMsg,
         "SELECT channel_id as \"channel_id!\" FROM message WHERE msg_id = $1",
@@ -105,6 +154,8 @@ pub async fn set_role_assignment(
     )
     .fetch_one(&ctx.data().db)
     .await?;
+
+    // we need to get the message by msgid (that is provided) and the channelid that is provided to us
     let channel = ChannelId::from(channel.channel_id as u64);
     let msg = ctx.http().get_message(channel, msg_id).await;
     if let Err(e) = msg {
@@ -115,6 +166,7 @@ pub async fn set_role_assignment(
     let reaction = msg.react(ctx, ReactionType::Unicode(emoji.clone())).await;
     match reaction {
         Ok(_) => {
+            // we set reaction to a message
             ctx.say("Set reaction  to msg!").await?;
             match DbRole::new_reaction_role(
                 ctx.data(),
@@ -128,7 +180,7 @@ pub async fn set_role_assignment(
             {
                 Ok(_) => {
                     let msg_url = format!(
-                        "https://discord.com/channels/{}/{}/{}",
+                        "https://discord.com/channels/{}/{}/{}", // messsage link builder
                         ctx.guild_id().unwrap().get(),
                         channel.get(),
                         msg_id.get()
@@ -165,7 +217,12 @@ pub async fn set_role_assignment(
             let msg_id = msg.id.get();
             let channel = channel.get();
             let error = error.to_string();
-            tracing::error!(msg_id,channel,error,"Error in reactiong to watched message");
+            tracing::error!(
+                msg_id,
+                channel,
+                error,
+                "Error in reactiong to watched message"
+            );
             ctx.say(error).await?;
         }
     }
