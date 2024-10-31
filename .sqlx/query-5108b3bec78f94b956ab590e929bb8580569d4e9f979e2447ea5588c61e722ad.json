@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO warn_triggers_guild(guild_id,action,number_of_warns) VALUES($1,$2,$3)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5108b3bec78f94b956ab590e929bb8580569d4e9f979e2447ea5588c61e722ad"
+}

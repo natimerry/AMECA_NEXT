@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM warnings_guild_member WHERE member_id = $1 AND guild_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3b6cd5db8476a359fbcd8dc2794d53263cadf6832603f271036f3a231d1b8f54"
+}
