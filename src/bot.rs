@@ -63,7 +63,13 @@ impl AMECA {
             }
 
             serenity::FullEvent::Message { new_message } => {
-                automod::on_new_msg(ctx, data, new_message).await?;
+                automod::on_new_msg(&ctx, &data, &new_message).await?;
+                let ctx = ctx.clone();
+                let data = data.db.clone();
+                let new_message = new_message.clone();
+                tokio::spawn(async move {
+                    afk_member::check_afk(&ctx,&data,&new_message).await.expect("Couldnt do afk checks");
+                }).await?;
             }
             serenity::FullEvent::Ready { .. } => {
                 info!("Bot is ready to start!");

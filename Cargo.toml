@@ -26,7 +26,7 @@ incremental = true
 
 [profile.release]
 opt-level = 3
-strip = true
+debug = true
 debug-assertions = false
 lto = "thin"
 panic = "unwind"

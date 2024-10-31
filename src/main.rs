@@ -12,6 +12,7 @@ use tracing_subscriber::EnvFilter;
 
 mod bot;
 mod models;
+mod utils;
 
 type DynError = Box<dyn std::error::Error + Send + Sync>;
 type BoxResult<T> = Result<T, DynError>;

@@ -1,18 +1,15 @@
-use crate::bot::afk_member::{check_if_author_is_afk, unafk};
 use crate::bot::AMECA;
 use crate::models::channel::ChannelData;
 use crate::models::messasges::{DbMessage, MessageData};
 use crate::models::role::Role;
 use crate::BoxResult;
 use poise::serenity_prelude::{
-    self as serenity, ChannelId, CreateMessage, MessageBuilder, MessageId, UserId,
+    self as serenity, ChannelId, MessageId, 
 };
 use poise::serenity_prelude::{Color, Context, CreateEmbed, CreateEmbedFooter, GuildId};
 use regex::Regex;
 use serenity::all::Message;
-use sqlx::types::chrono::{DateTime, Utc};
 use sqlx::{FromRow, PgPool};
-use std::cell::LazyCell;
 use std::ops::Deref;
 use tracing::{debug, error, info, span, trace, warn, Level};
 
@@ -74,7 +71,7 @@ pub async fn on_new_msg(ctx: &Context, data: &AMECA, new_message: &Message) -> B
         return Ok(());
     }
 
-    if new_message.author.id.get() == std::env::var("BOT_USER").unwrap().parse::<u64>().unwrap() {
+    if crate::utils::check_if_author_is_bot(new_message) {
         return Ok(());
     }
     // log the message to db
@@ -123,83 +120,9 @@ pub async fn on_new_msg(ctx: &Context, data: &AMECA, new_message: &Message) -> B
     // run automod through processed message!
     analyse_msg(new_message.clone(), &data.db, &data, &ctx).await?;
 
-    let guild_id = guild_id.parse::<i64>()?;
-    // check if author had set AFK
-
-    let is_afk = check_if_author_is_afk(new_message.clone(), data.db.clone()).await?;
-    if is_afk {
-        let mut member = ctx.http.get_member(GuildId::from(guild_id as u64), new_message.author.id).await?;
-        unafk(&ctx, &mut member, data.db.clone()).await?;
-        let x = MessageBuilder::new()
-            .push("Welcome back ")
-            .mention(&new_message.author)
-            .build();
-        channel
-            .id()
-            .send_message(ctx, CreateMessage::new().content(&x))
-            .await?;
-    }
-    let user_regex: LazyCell<Regex> = LazyCell::new(|| {
-        info!("Compiling user mention checking regex");
-        Regex::new("<@.{18}>").expect("Unable to compile regex")
-    });
 
     // check if one of mentioned user was afk
-    let matches = user_regex
-        .find_iter(&new_message.content)
-        .map(|m| {
-            let mention = m.as_str().to_string();
-            let len = m.len();
-            let slice = &mention[2..len - 1];
-            debug!("UserID slice matched by regex: {slice} from {}",mention);
-            slice.parse::<i64>().expect("INVALID USER ID")
-        })
-        .collect::<Vec<_>>();
 
-
-    if matches.is_empty() {
-        return Ok(());
-    }
-
-    for user in matches {
-        #[derive(FromRow, Debug)]
-        struct Time {
-            time_afk: DateTime<Utc>,
-        }
-        let time_of_afk: Option<Time> = sqlx::query_as(
-            "SELECT time_afk FROM afk_member_guild WHERE guild_id = $1 AND member_id = $2",
-        )
-            .bind(guild_id)
-            .bind(user)
-            .fetch_optional(&data.db)
-            .await?;
-        debug!("Time of afk = {:?}", &time_of_afk);
-        if let Some(time_of_afk) = time_of_afk {
-            let user = ctx
-                .http
-                .get_user(UserId::new(user.try_into().unwrap()))
-                .await?
-                .name;
-
-            let total_seconds = (Utc::now() - time_of_afk.time_afk).num_seconds();
-
-            let days = total_seconds / 86400;
-            let hours = (total_seconds % 86400) / 3600;
-            let minutes = (total_seconds % 3600) / 60;
-            let seconds = total_seconds % 60;
-
-            let content = CreateMessage::new().content(format!(
-                "{} is afk for `{} Days {} Hours {} Minutes {} Seconds`",
-                user,days, hours, minutes, seconds
-            ));
-            new_message
-                .channel(&ctx)
-                .await?
-                .id()
-                .send_message(&ctx, content)
-                .await?;
-        }
-    }
     Ok(())
 }
 
@@ -229,7 +152,6 @@ pub async fn cache_regex(db: &PgPool, data: &AMECA) -> BoxResult<()> {
             .await?;
 
     trace!("{:?}", list_of_banned_patterns);
-    info!("Syncing to bot");
     for banned_word in list_of_banned_patterns {
         let re = Regex::new(&banned_word.pattern.to_string()).expect("Unable to compile regex");
         debug!("Caching regex to map {re:#?}");
