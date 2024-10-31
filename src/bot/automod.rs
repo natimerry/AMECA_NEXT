@@ -3,9 +3,7 @@ use crate::models::channel::ChannelData;
 use crate::models::messasges::{DbMessage, MessageData};
 use crate::models::role::Role;
 use crate::BoxResult;
-use poise::serenity_prelude::{
-    self as serenity, ChannelId, MessageId, 
-};
+use poise::serenity_prelude::{self as serenity, ChannelId, MessageId};
 use poise::serenity_prelude::{Color, Context, CreateEmbed, CreateEmbedFooter, GuildId};
 use regex::Regex;
 use serenity::all::Message;
@@ -105,7 +103,7 @@ pub async fn on_new_msg(ctx: &Context, data: &AMECA, new_message: &Message) -> B
         new_message.clone(),
         channel.clone().guild().unwrap(),
     )
-        .await;
+    .await;
 
     if let Err(e) = res {
         let content = to_print;
@@ -119,7 +117,6 @@ pub async fn on_new_msg(ctx: &Context, data: &AMECA, new_message: &Message) -> B
     }
     // run automod through processed message!
     analyse_msg(new_message.clone(), &data.db, &data, &ctx).await?;
-
 
     // check if one of mentioned user was afk
 

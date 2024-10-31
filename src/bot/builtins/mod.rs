@@ -7,9 +7,7 @@ pub async fn servers(ctx: Context<'_>) -> BoxResult<()> {
 }
 
 #[poise::command(slash_command, prefix_command)]
-pub async fn help<'a>(ctx: Context<'a>,
-                      #[rest]
-                      command: Option<String>) -> BoxResult<()> {
+pub async fn help<'a>(ctx: Context<'a>, #[rest] command: Option<String>) -> BoxResult<()> {
     let configuration = poise::builtins::HelpConfiguration {
         include_description: true,
         ephemeral: true,

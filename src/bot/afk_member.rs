@@ -50,26 +50,27 @@ pub async fn afk(ctx: Context<'_>, #[rest] reason: Option<String>) -> BoxResult<
         .await
     {
         tracing::error!(
-                "Failed to set nickname for user ID: {}. Error: {:?}",
-                author,
-                e
-            );
+            "Failed to set nickname for user ID: {}. Error: {:?}",
+            author,
+            e
+        );
         ctx.say(format!("Couldn't set nickname for user: {}", e))
             .await?;
     } else {
         tracing::debug!(
-                "Nickname successfully updated to [AFK] for user ID: {}",
-                author
-            );
+            "Nickname successfully updated to [AFK] for user ID: {}",
+            author
+        );
     }
 
     // Insert a new AFK entry in the database with member and guild info
     sqlx::query!(
-        "INSERT INTO afk_member_guild(member_id, guild_id, time_afk,previous_name) VALUES ($1, $2, $3,$4)",
+        "INSERT INTO afk_member_guild(member_id, guild_id, time_afk,previous_name,reason) VALUES ($1, $2, $3,$4,$5)",
         author,
         guild_id,
         Utc::now(),
         username,
+        reason
     )
         .execute(&ctx.data().db)
         .await?;
@@ -133,16 +134,17 @@ pub async fn check_afk(
 
     for user in matches {
         #[derive(FromRow, Debug)]
-        struct Time {
+        struct Data {
             time_afk: DateTime<Utc>,
+            reason: String,
         }
-        let time_of_afk: Option<Time> = sqlx::query_as(
-            "SELECT time_afk FROM afk_member_guild WHERE guild_id = $1 AND member_id = $2",
+        let time_of_afk: Option<Data> = sqlx::query_as(
+            "SELECT time_afk,reason FROM afk_member_guild WHERE guild_id = $1 AND member_id = $2",
         )
-            .bind(guild_id)
-            .bind(user)
-            .fetch_optional(data)
-            .await?;
+        .bind(guild_id)
+        .bind(user)
+        .fetch_optional(data)
+        .await?;
         debug!("Time of afk = {:?}", &time_of_afk);
         if let Some(time_of_afk) = time_of_afk {
             let user = ctx
@@ -159,8 +161,8 @@ pub async fn check_afk(
             let seconds = total_seconds % 60;
 
             let content = CreateMessage::new().content(format!(
-                "{} is afk for `{} Days {} Hours {} Minutes {} Seconds`",
-                user, days, hours, minutes, seconds
+                "{} is afk for `{} Days {} Hours {} Minutes {} Seconds`\nReason: {}",
+                user, days, hours, minutes, seconds, time_of_afk.reason
             ));
             new_message
                 .channel(&ctx)
@@ -188,10 +190,14 @@ pub async fn unafk(ctx: impl CacheHttp, member: &mut Member, pool: PgPool) -> Bo
     let previous_name: (String,) = sqlx::query_as(
         "SELECT previous_name FROM afk_member_guild WHERE member_id = $1 and guild_id = $2",
     )
-        .bind(member_id)
-        .bind(guild_id)
-        .fetch_one(&pool).await?;
-    debug!("Previous username for user: {} in database was {:?}",member.guild_id,previous_name);
+    .bind(member_id)
+    .bind(guild_id)
+    .fetch_one(&pool)
+    .await?;
+    debug!(
+        "Previous username for user: {} in database was {:?}",
+        member.guild_id, previous_name
+    );
     let previous_name = previous_name.0;
 
     tracing::debug!("Username after removing [AFK] prefix: {}", previous_name);
@@ -226,8 +232,8 @@ pub async fn unafk(ctx: impl CacheHttp, member: &mut Member, pool: PgPool) -> Bo
         member_id,
         guild_id
     )
-        .execute(&pool)
-        .await?;
+    .execute(&pool)
+    .await?;
     tracing::info!(
         "AFK status successfully removed from database for user ID: {} in guild ID: {}",
         member_id,
@@ -257,10 +263,10 @@ pub async fn check_if_author_is_afk(pool: PgPool, author: i64, guild: i64) -> Bo
     let member_id: Option<DummyMember> = sqlx::query_as(
         "SELECT member_id FROM afk_member_guild WHERE member_id = $1 AND guild_id = $2",
     )
-        .bind(author)
-        .bind(guild)
-        .fetch_optional(&pool)
-        .await?;
+    .bind(author)
+    .bind(guild)
+    .fetch_optional(&pool)
+    .await?;
     tracing::debug!("Database query result for AFK status: {:?}", member_id);
 
     // Return true if an AFK entry is found, otherwise false

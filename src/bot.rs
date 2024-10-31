@@ -36,7 +36,7 @@ use std::time::Duration;
 use tokio::task::JoinHandle;
 use tracing::log::debug;
 use tracing::{error, info, span, trace, warn, Level};
-use warn::warn_user;
+use warn::warnings as warn_user;
 
 #[derive(Clone)]
 pub struct AMECA {
@@ -68,8 +68,11 @@ impl AMECA {
                 let data = data.db.clone();
                 let new_message = new_message.clone();
                 tokio::spawn(async move {
-                    afk_member::check_afk(&ctx,&data,&new_message).await.expect("Couldnt do afk checks");
-                }).await?;
+                    afk_member::check_afk(&ctx, &data, &new_message)
+                        .await
+                        .expect("Couldnt do afk checks");
+                })
+                .await?;
             }
             serenity::FullEvent::Ready { .. } => {
                 info!("Bot is ready to start!");
