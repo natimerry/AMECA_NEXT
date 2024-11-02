@@ -1,6 +1,7 @@
 FROM rust:slim-bullseye as build
 LABEL authors="nat"
 RUN USER=root apt-get update -y && apt-get -y install pkg-config libssl-dev lld
+RUN USER=root apt-get install realpath
 RUN USER=root cargo new --bin ameca_pg
 RUN rustup default nightly  
 WORKDIR /ameca_pg
