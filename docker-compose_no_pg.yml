@@ -1,5 +1,6 @@
 services:
   ameca:
+    restart: always
     network_mode: bridge
     build:
       context: .
