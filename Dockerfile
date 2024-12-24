@@ -1,6 +1,6 @@
 FROM rust:slim-bullseye as build
 LABEL authors="nat"
-RUN USER=root apt-get update -y && apt-get -y install openssh-server pkg-config libssl-dev lld realpath
+RUN USER=root apt-get update -y && apt-get -y install openssh-server pkg-config libssl-dev lld coreutils
 RUN USER=root service ssh start
 RUN USER=root cargo new --bin ameca_pg
 RUN rustup default nightly  
