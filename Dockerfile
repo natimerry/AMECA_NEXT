@@ -3,7 +3,7 @@ LABEL authors="nat"
 RUN USER=root apt-get update -y && apt-get -y install openssh-server pkg-config libssl-dev lld coreutils tree
 RUN USER=root service ssh start
 RUN USER=root cargo new --bin ameca_pg
-RUN rustup default nightly  
+RUN rustup default nightly
 WORKDIR /ameca_pg
 
 # 2. Copy our manifests
@@ -11,15 +11,14 @@ COPY ./Cargo.lock ./Cargo.lock
 COPY ./Cargo.toml ./Cargo.toml
 
 RUN cargo build --release
-RUN rm src/*
-
+RUN rm -rf src/*
 
 COPY ./src/ src/
-RUN tree src/
+RUN tree src
 COPY ./migrations/ migrations/
 COPY ./.sqlx .sqlx/
-COPY ./sql sql/
 
+RUN tree ./sqlx ./migrations
 ENV SQLX_OFFLINE=true
 RUN cargo build --release
 
