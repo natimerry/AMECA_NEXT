@@ -17,6 +17,7 @@ COPY ./src/ src/
 RUN tree src
 COPY ./migrations/ migrations/
 COPY ./.sqlx .sqlx/
+COPY ./sql sql/
 
 RUN tree ./sqlx ./migrations
 ENV SQLX_OFFLINE=true
