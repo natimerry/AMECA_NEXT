@@ -1,6 +1,6 @@
 FROM rust:slim-bullseye as build
 LABEL authors="nat"
-RUN USER=root apt-get update -y && apt-get -y install openssh-server pkg-config libssl-dev lld coreutils
+RUN USER=root apt-get update -y && apt-get -y install openssh-server pkg-config libssl-dev lld coreutils tree
 RUN USER=root service ssh start
 RUN USER=root cargo new --bin ameca_pg
 RUN rustup default nightly  
@@ -11,12 +11,14 @@ COPY ./Cargo.lock ./Cargo.lock
 COPY ./Cargo.toml ./Cargo.toml
 
 RUN cargo build --release
-RUN rm src/*.rs
+RUN rm src/*
 
+
+COPY ./src/ src/
+RUN tree src/
 COPY ./migrations/ migrations/
 COPY ./.sqlx .sqlx/
 COPY ./sql sql/
-COPY ./src/ src/
 
 ENV SQLX_OFFLINE=true
 RUN cargo build --release
