@@ -12,7 +12,7 @@ pub async fn purge<'a>(
     ctx: Context<'a>,
     #[description = "Select logging channel"]
     #[min = 2]
-    #[max = 100]
+    #[max = 300]
     number_to_purge: u32,
 ) -> BoxResult<()> {
     // get last x msg
