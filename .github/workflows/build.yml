@@ -22,6 +22,16 @@ jobs:
           toolchain: stable
           override: true
 
+      - name: Install LLD linker
+        run: sudo apt-get update && sudo apt-get install -y lld clang
+
+      - name: Ensure LLD is used in existing Cargo config
+        run: |
+          mkdir -p ~/.cargo
+          echo '' >> ~/.cargo/config.toml
+          echo '[target.x86_64-unknown-linux-gnu]' >> ~/.cargo/config.toml
+          echo 'rustflags = ["-C", "link-arg=-fuse-ld=lld"]' >> ~/.cargo/config.toml
+      
       - name: Cache cargo registry
         uses: actions/cache@v3
         with:
