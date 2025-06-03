@@ -4,7 +4,7 @@ use crate::{BoxResult, Context};
 use poise::futures_util::Stream;
 use poise::futures_util::StreamExt;
 use poise::serenity_prelude::{futures, Color, CreateEmbed, CreateEmbedAuthor, CreateMessage};
-use regex::Regex;
+use regex::{Regex, RegexBuilder};
 use tracing::log::info;
 use tracing::{debug, trace};
 
@@ -98,7 +98,7 @@ pub async fn ban_pattern(
     let guild = ctx.guild_id().expect("GuildID not found"); // unreachable error
     let guild = guild.get() as i64;
     let author = ctx.author().id.get() as i64;
-    let regex = Regex::new(&pattern);
+    let regex = RegexBuilder::new(&pattern).case_insensitive(true).build();
 
     ctx.defer().await?;
     match regex {
