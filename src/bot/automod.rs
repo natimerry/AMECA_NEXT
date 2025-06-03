@@ -5,7 +5,7 @@ use crate::models::role::Role;
 use crate::BoxResult;
 use poise::serenity_prelude::{self as serenity, ChannelId, MessageId};
 use poise::serenity_prelude::{Color, Context, CreateEmbed, CreateEmbedFooter, GuildId};
-use regex::Regex;
+use regex::{Regex, RegexBuilder};
 use serenity::all::Message;
 use sqlx::{FromRow, PgPool};
 use std::ops::Deref;
@@ -150,7 +150,7 @@ pub async fn cache_regex(db: &PgPool, data: &AMECA) -> BoxResult<()> {
 
     trace!("{:?}", list_of_banned_patterns);
     for banned_word in list_of_banned_patterns {
-        let re = Regex::new(&banned_word.pattern.to_string()).expect("Unable to compile regex");
+        let re = RegexBuilder::new(&banned_word.pattern.to_string()).case_insensitive(true).build().expect("Unable to compile regex");
         debug!("Caching regex to map {re:#?}");
         data.cached_regex
             .entry(banned_word.guild_id)
