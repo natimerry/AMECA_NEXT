@@ -1,7 +1,10 @@
 [package]
 name = "ameca_pg"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
+repository = "https://github.com/natimerry/AMECA-NEXT"
+authors = ["natimerry"]
+
 
 [dependencies]
 tracing = "0.1.40"
@@ -32,6 +35,11 @@ lto = "thin"
 panic = "unwind"
 incremental = true
 overflow-checks = false
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
 
 [build]
 rustflags=["-Ctarget-feature=+avx2"]
